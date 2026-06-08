@@ -1,7 +1,7 @@
 {
   "name": "imgimg",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.1.0",
   "description": "Local AI image generation tool with ComfyUI workflows, prompt enhancement, gallery, and canvas",
   "license": "MIT",
   "author": "oshtz",

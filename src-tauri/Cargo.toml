@@ -1,6 +1,6 @@
 [package]
 name = "imgimg"
-version = "0.1.2"
+version = "0.1.0"
 description = "Local AI image generation tool"
 authors = ["oshtz"]
 license = "MIT"
