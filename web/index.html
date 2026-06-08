@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="img² - Local AI image generation tool" />
+    <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
+    <title>img²</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
+    <script>
+      (function () {
+        try {
+          var pref = localStorage.getItem("imgimg.theme.v1") || "dark";
+          var isDark = pref === "dark";
+          var root = document.documentElement;
+          if (isDark) root.classList.add("dark");
+          else root.classList.remove("dark");
+          root.style.colorScheme = isDark ? "dark" : "light";
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-100">
+    <noscript>img² requires JavaScript to run.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

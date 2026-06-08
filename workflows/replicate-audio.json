@@ -1,0 +1,23 @@
+{
+  "meta": {
+    "defaultAssetType": "audio",
+    "description": "Generate audio using any Replicate model",
+    "dynamicModel": true,
+    "engine": "replicate",
+    "label": "Replicate Audio",
+    "outputMode": "single_audio",
+    "supportsImageInput": false,
+    "ui": {
+      "aspectRatio": false,
+      "batchSize": false
+    },
+    "workflow_id": "replicate-audio"
+  },
+  "prompt": {
+    "template": {
+      "prompt": "__PROMPT__",
+      "seed": "__SEED__"
+    },
+    "type": "replicate"
+  }
+}

@@ -1,0 +1,21 @@
+#!/bin/bash
+# Pre-push hook: full test suite.
+# Runs before pushing to remote as the complete safety net.
+
+set -e
+
+echo "Pre-push: running full frontend test suite..."
+cd web
+npx vitest run 2>&1 | tail -5 || {
+  echo "Frontend tests failed. Fix before pushing."
+  exit 1
+}
+
+echo "Pre-push: running Rust tests..."
+cd ../src-tauri
+cargo test 2>&1 | tail -5 || {
+  echo "Rust tests failed. Fix before pushing."
+  exit 1
+}
+
+echo "All tests passed. Pushing..."

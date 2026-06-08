@@ -1,0 +1,24 @@
+{
+  "meta": {
+    "defaultAssetType": "image",
+    "description": "Generate images using any FAL model",
+    "dynamicModel": true,
+    "engine": "fal",
+    "label": "FAL Image",
+    "outputMode": "single_image",
+    "supportsImageInput": true,
+    "ui": {
+      "aspectRatio": true,
+      "batchSize": true
+    },
+    "workflow_id": "fal-image"
+  },
+  "prompt": {
+    "template": {
+      "image_size": "__ASPECT_RATIO__",
+      "prompt": "__PROMPT__",
+      "seed": "__SEED__"
+    },
+    "type": "fal"
+  }
+}

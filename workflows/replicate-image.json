@@ -1,0 +1,24 @@
+{
+  "meta": {
+    "defaultAssetType": "image",
+    "description": "Generate images using any Replicate model",
+    "dynamicModel": true,
+    "engine": "replicate",
+    "label": "Replicate Image",
+    "outputMode": "single_image",
+    "supportsImageInput": true,
+    "ui": {
+      "aspectRatio": true,
+      "batchSize": false
+    },
+    "workflow_id": "replicate-image"
+  },
+  "prompt": {
+    "template": {
+      "aspect_ratio": "__ASPECT_RATIO__",
+      "prompt": "__PROMPT__",
+      "seed": "__SEED__"
+    },
+    "type": "replicate"
+  }
+}

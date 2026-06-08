@@ -1,0 +1,41 @@
+[package]
+name = "imgimg"
+version = "0.1.2"
+description = "Local AI image generation tool"
+authors = ["oshtz"]
+license = "MIT"
+repository = "https://github.com/oshtz/imgimg"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.6", features = [] }
+
+[dependencies]
+tauri = { version = "2.10.3", features = ["protocol-asset", "image-ico"] }
+tauri-plugin-log = "2"
+tauri-plugin-window-state = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
+reqwest = { version = "0.12", features = ["json", "multipart", "stream"] }
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = { version = "0.26", features = ["native-tls"] }
+nanoid = "0.4"
+thiserror = "2"
+dashmap = "6"
+base64 = "0.22"
+log = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
+futures = "0.3"
+uuid = { version = "1", features = ["v4"] }
+regex = "1"
+urlencoding = "2"
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
+opener = "0.8.4"

@@ -1,0 +1,27 @@
+{
+  "name": "imgimg",
+  "private": true,
+  "version": "0.1.2",
+  "description": "Local AI image generation tool with ComfyUI workflows, prompt enhancement, gallery, and canvas",
+  "license": "MIT",
+  "author": "oshtz",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "test": "npm --prefix web run test",
+    "test:coverage": "npm --prefix web run test -- --coverage",
+    "test:rust": "cd src-tauri && cargo test",
+    "test:all": "npm run test && npm run test:rust",
+    "install:all": "npm install && npm --prefix web install",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.10.1",
+    "concurrently": "^9.1.0"
+  }
+}

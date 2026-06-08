@@ -1,0 +1,52 @@
+## Node / JS
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+## Builds
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+## Test / Coverage
+coverage/
+
+## Env
+.env
+.env.local
+.env.*.local
+
+## OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+## Caches
+.eslintcache
+.turbo
+
+## Database files
+*.sqlite
+*.sqlite3
+*.db
+
+## Tauri / Rust
+src-tauri/target/
+src-tauri/gen/
+
+## Project-specific
+TASKLIST.md
+AGENTS.md
+.codex-qa/
+docs/superpowers/
+.agents/
+.claude/
+.opencode/

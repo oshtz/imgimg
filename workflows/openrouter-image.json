@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "defaultAssetType": "image",
+    "description": "Generate images using any OpenRouter model with image output",
+    "dynamicModel": true,
+    "engine": "openrouter",
+    "label": "OpenRouter Image",
+    "maxImageInputs": 14,
+    "outputMode": "single_image",
+    "supportedAspectRatios": [
+      "1:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9"
+    ],
+    "supportsImageInput": true,
+    "ui": {
+      "aspectRatio": true,
+      "batchSize": false
+    },
+    "workflow_id": "openrouter-image"
+  },
+  "prompt": {
+    "template": {
+      "image_config": {
+        "aspect_ratio": "__ASPECT_RATIO__"
+      },
+      "messages": [
+        {
+          "content": "__PROMPT__",
+          "role": "user"
+        }
+      ],
+      "response_modalities": [
+        "image",
+        "text"
+      ],
+      "model": "__MODEL__"
+    },
+    "type": "openrouter"
+  }
+}

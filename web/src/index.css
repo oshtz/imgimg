@@ -1,0 +1,190 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --imgimg-ui-scale: 1;
+  --counter-grad-from: rgba(15, 23, 42, 0.14);
+  --counter-grad-to: transparent;
+  --counter-bg: rgba(0, 0, 0, 0.03);
+  
+  /* Chart colors - light mode */
+  --chart-grid: rgba(0, 0, 0, 0.08);
+  --chart-axis: #71717a;
+  --chart-text: #3f3f46;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #e4e4e7;
+  --chart-tooltip-text: #18181b;
+  
+  /* Chart accent colors */
+  --chart-amber: #f59e0b;
+  --chart-blue: #3b82f6;
+  --chart-green: #10b981;
+  --chart-red: #ef4444;
+  --chart-purple: #8b5cf6;
+  --chart-pink: #ec4899;
+
+  font-size: calc(16px * var(--imgimg-ui-scale));
+}
+
+.dark {
+  --counter-grad-from: rgba(255, 255, 255, 0.08);
+  --counter-grad-to: transparent;
+  --counter-bg: rgba(255, 255, 255, 0.06);
+  
+  /* Chart colors - dark mode */
+  --chart-grid: rgba(255, 255, 255, 0.08);
+  --chart-axis: #a1a1aa;
+  --chart-text: #d4d4d8;
+  --chart-tooltip-bg: #18181b;
+  --chart-tooltip-border: #27272a;
+  --chart-tooltip-text: #fafafa;
+  
+  /* Chart accent colors - slightly brighter for dark mode */
+  --chart-amber: #fbbf24;
+  --chart-blue: #60a5fa;
+  --chart-green: #34d399;
+  --chart-red: #f87171;
+  --chart-purple: #a78bfa;
+  --chart-pink: #f472b6;
+}
+
+/* Enhance prompt glow */
+@keyframes enhance-glow {
+  0%, 100% { box-shadow: 0 0 4px 0 rgba(161, 161, 170, 0.3); }
+  50% { box-shadow: 0 0 8px 2px rgba(161, 161, 170, 0.45); }
+}
+.dark .animate-enhance-glow {
+  animation: enhance-glow-dark 2.5s ease-in-out infinite;
+}
+@keyframes enhance-glow-dark {
+  0%, 100% { box-shadow: 0 0 4px 0 rgba(161, 161, 170, 0.2); }
+  50% { box-shadow: 0 0 10px 2px rgba(161, 161, 170, 0.35); }
+}
+.animate-enhance-glow {
+  animation: enhance-glow 2.5s ease-in-out infinite;
+}
+
+/* Recharts custom styling */
+.recharts-cartesian-axis-tick-value {
+  fill: var(--chart-text);
+  font-size: 11px;
+}
+
+.recharts-legend-item-text {
+  color: var(--chart-text) !important;
+  font-size: 12px;
+}
+
+.recharts-tooltip-wrapper {
+  outline: none;
+}
+
+.recharts-default-tooltip {
+  background-color: var(--chart-tooltip-bg) !important;
+  border: 1px solid var(--chart-tooltip-border) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1) !important;
+}
+
+.recharts-tooltip-label {
+  color: var(--chart-tooltip-text) !important;
+  font-weight: 600 !important;
+  margin-bottom: 4px !important;
+}
+
+.recharts-tooltip-item {
+  color: var(--chart-tooltip-text) !important;
+  font-size: 12px !important;
+}
+
+.recharts-tooltip-item-name {
+  color: var(--chart-axis) !important;
+}
+
+/* Sonner toast overrides — on-brand font, colors, and radii */
+[data-sonner-toaster] {
+  font-family: "Azeret Mono" !important;
+}
+
+/* Light mode toast (default) */
+[data-sonner-toast][data-styled='true'] {
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  background: #ffffff !important;
+  border: 1px solid #e4e4e7 !important;
+  color: #18181b !important;
+}
+
+/* Dark mode toast */
+.dark [data-sonner-toast][data-styled='true'] {
+  background: #18181b !important;
+  border: 1px solid #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+
+[data-sonner-toast] [data-close-button] {
+  border-radius: 4px !important;
+}
+
+/* ── Custom scrollbars ── */
+
+/* Webkit (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #78b3d6; /* accent-sky */
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+.dark ::-webkit-scrollbar-thumb:active {
+  background: #78b3d6; /* accent-sky */
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d8 transparent;
+}
+
+.dark * {
+  scrollbar-color: #3f3f46 transparent;
+}
+
+/* Respect OS-level motion preferences for all animations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

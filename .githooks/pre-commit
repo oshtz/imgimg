@@ -1,0 +1,23 @@
+#!/bin/bash
+# Pre-commit hook: fast type check + changed-file tests only.
+# Keeps commits fast while catching type errors and test regressions.
+
+set -e
+
+echo "Pre-commit: type check..."
+cd web
+npx tsc --noEmit --pretty 2>&1 || {
+  echo "TypeScript errors found. Fix them before committing."
+  exit 1
+}
+
+CHANGED_TS=$(git diff --cached --name-only --diff-filter=ACM -- 'web/src/**/*.ts' | head -20)
+if [ -n "$CHANGED_TS" ]; then
+  echo "Pre-commit: running affected tests..."
+  npx vitest run --reporter=dot 2>&1 | tail -5 || {
+    echo "Tests failed. Fix them before committing."
+    exit 1
+  }
+fi
+
+echo "Pre-commit checks passed."

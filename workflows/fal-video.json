@@ -1,0 +1,24 @@
+{
+  "meta": {
+    "defaultAssetType": "video",
+    "description": "Generate videos using any FAL model",
+    "dynamicModel": true,
+    "engine": "fal",
+    "label": "FAL Video",
+    "outputMode": "single_image",
+    "supportsImageInput": true,
+    "supportsVideoInput": true,
+    "ui": {
+      "aspectRatio": true,
+      "batchSize": false
+    },
+    "workflow_id": "fal-video"
+  },
+  "prompt": {
+    "template": {
+      "prompt": "__PROMPT__",
+      "seed": "__SEED__"
+    },
+    "type": "fal"
+  }
+}

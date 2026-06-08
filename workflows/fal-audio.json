@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "defaultAssetType": "audio",
+    "description": "Generate audio using any FAL model",
+    "dynamicModel": true,
+    "engine": "fal",
+    "label": "FAL Audio",
+    "outputMode": "single_audio",
+    "supportsImageInput": false,
+    "ui": {
+      "aspectRatio": false,
+      "batchSize": false
+    },
+    "workflow_id": "fal-audio"
+  },
+  "prompt": {
+    "template": {
+      "prompt": "__PROMPT__"
+    },
+    "type": "fal"
+  }
+}
