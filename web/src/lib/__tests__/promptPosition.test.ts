@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  clampPromptSidebarWidth,
   getHistoryPaneClassName,
   getPromptFlowClassName,
   getPromptPaneClassName,
@@ -38,7 +39,8 @@ describe("promptPosition", () => {
     });
     expect(paneClass).toContain("lg:self-stretch");
     expect(paneClass).toContain("lg:flex-col");
-    expect(paneClass).toContain("lg:w-[24rem]");
+    expect(paneClass).toContain("lg:w-[var(--prompt-sidebar-width)]");
+    expect(paneClass).toContain("relative");
 
     const historyClass = getHistoryPaneClassName("right");
     expect(historyClass).toContain("lg:min-w-0");
@@ -53,5 +55,12 @@ describe("promptPosition", () => {
       hasDashboardItems: false,
     })).toBe("shrink-0");
     expect(getHistoryPaneClassName("bottom")).toBe("flex min-h-0 flex-1 flex-col");
+  });
+
+  it("clamps persisted sidebar widths to usable bounds", () => {
+    expect(clampPromptSidebarWidth(280)).toBe(320);
+    expect(clampPromptSidebarWidth("512")).toBe(512);
+    expect(clampPromptSidebarWidth(900)).toBe(640);
+    expect(clampPromptSidebarWidth("nope")).toBe(384);
   });
 });

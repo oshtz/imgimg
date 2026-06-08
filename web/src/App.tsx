@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { TbMenu2, TbWand } from "react-icons/tb";
 import {
   createGeneration,
@@ -26,6 +26,7 @@ import {
   getFalModelParameters,
 } from "./client";
 import { PromptCenterpiece, type PromptCenterpieceState } from "./components/PromptCenterpiece";
+import { PromptSidebarResizeHandle } from "./components/PromptSidebarResizeHandle";
 import { GenerationHistoryList } from "./components/GenerationHistoryList";
 import { GalleryPanel } from "./components/GalleryPanel";
 import { GenerationDetailPanel, type GenerationDetailSelection, type OutpaintParams } from "./components/GenerationDetailPanel";
@@ -67,6 +68,8 @@ import {
   getPromptPaneClassName,
   isPromptSidebarPosition,
   parsePromptPosition,
+  clampPromptSidebarWidth,
+  DEFAULT_PROMPT_SIDEBAR_WIDTH,
 } from "./lib/promptPosition";
 import {
   DYNAMIC_MODEL_IDS_BY_WORKFLOW_STORAGE_KEY,
@@ -148,6 +151,10 @@ export default function App() {
   const [promptPosition, setPromptPosition] = usePersistedState<PromptPosition>("imgimg.promptPosition.v1", "bottom", {
     serialize: (v) => v,
     deserialize: parsePromptPosition,
+  });
+  const [promptSidebarWidth, setPromptSidebarWidth] = usePersistedState<number>("imgimg.promptSidebarWidth.v1", DEFAULT_PROMPT_SIDEBAR_WIDTH, {
+    serialize: (v) => String(clampPromptSidebarWidth(v)),
+    deserialize: clampPromptSidebarWidth,
   });
   const [cardSize, setCardSize] = usePersistedState<CardSize>("imgimg.cardSize.v1", "medium", {
     serialize: (v) => v,
@@ -618,6 +625,12 @@ export default function App() {
 
   const isCanvasMode = activeView === "canvas" && activeCanvasId != null;
   const promptIsSidebar = selectedWorkflow !== null && isPromptSidebarPosition(promptPosition);
+  const promptPaneStyle = promptIsSidebar
+    ? ({ "--prompt-sidebar-width": `${promptSidebarWidth}px` } as CSSProperties)
+    : undefined;
+  const handlePromptSidebarWidthChange = useCallback((nextWidth: number) => {
+    setPromptSidebarWidth(clampPromptSidebarWidth(nextWidth));
+  }, [setPromptSidebarWidth]);
   const hasDashboardItems = !selectedWorkflow && (visibleHomeWorkflows.length > 0 || canvases.length > 0);
   const isFluxLoraWorkflow = selectedWorkflow?.supportsLora === true;
   const loraTagCandidates = useMemo(() => buildLoraTagCandidates(models), [models]);
@@ -1631,7 +1644,7 @@ export default function App() {
                     position: promptPosition,
                     hasWorkflow: selectedWorkflow !== null,
                     hasDashboardItems,
-                  })}>
+                  })} style={promptPaneStyle}>
                     {hasDashboardItems ? (
                       /* Workflow card grid when no workflow selected but workflows available */
                       <WorkflowCardGrid
@@ -1766,6 +1779,14 @@ export default function App() {
                       <div role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
                         {error}
                       </div>
+                    ) : null}
+
+                    {selectedWorkflow && promptIsSidebar ? (
+                      <PromptSidebarResizeHandle
+                        position={promptPosition as Extract<PromptPosition, "left" | "right">}
+                        width={promptSidebarWidth}
+                        onWidthChange={handlePromptSidebarWidthChange}
+                      />
                     ) : null}
                   </div>
 

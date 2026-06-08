@@ -1,5 +1,15 @@
 export type PromptPosition = "top" | "bottom" | "left" | "right";
 
+export const PROMPT_SIDEBAR_MIN_WIDTH = 320;
+export const DEFAULT_PROMPT_SIDEBAR_WIDTH = 384;
+export const PROMPT_SIDEBAR_MAX_WIDTH = 640;
+
+export function clampPromptSidebarWidth(value: unknown): number {
+  const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  if (!Number.isFinite(n)) return DEFAULT_PROMPT_SIDEBAR_WIDTH;
+  return Math.round(Math.min(PROMPT_SIDEBAR_MAX_WIDTH, Math.max(PROMPT_SIDEBAR_MIN_WIDTH, n)));
+}
+
 export function parsePromptPosition(value: string): PromptPosition {
   return value === "top" || value === "left" || value === "right" ? value : "bottom";
 }
@@ -40,13 +50,13 @@ export function getPromptPaneClassName(options: {
 
   return [
     base,
+    "relative",
     "lg:flex",
     "lg:flex-col",
     "lg:min-h-0",
-    "lg:w-[24rem]",
+    "lg:w-[var(--prompt-sidebar-width)]",
     "lg:flex-none",
     "lg:self-stretch",
-    "xl:w-[28rem]",
   ].join(" ");
 }
 
