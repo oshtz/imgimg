@@ -122,6 +122,8 @@ jobs:
           path: release/windows
           format: spdx-json
           output-file: release/windows/imgimg-windows.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
       - name: Create Windows checksum manifest
         shell: pwsh
         run: |
@@ -218,6 +220,8 @@ jobs:
           path: release/macos
           format: spdx-json
           output-file: release/macos/imgimg-macos.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
       - name: Create macOS checksum manifest
         run: |
           cd release/macos
