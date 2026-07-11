@@ -187,6 +187,12 @@ jobs:
             --password "$APPLE_PASSWORD"
       - name: Build signed and notarized Apple Silicon DMG
         run: npx tauri build --bundles dmg
+      - name: Notarize and staple macOS DMG
+        run: |
+          dmg=$(find src-tauri/target/release/bundle/dmg -type f -name '*.dmg' -print -quit)
+          test -n "$dmg"
+          xcrun notarytool submit "$dmg" --keychain-profile imgimg-ci --wait
+          xcrun stapler staple "$dmg"
       - name: Verify signature and notarization ticket
         run: |
           dmg=$(find src-tauri/target/release/bundle/dmg -type f -name '*.dmg' -print -quit)
@@ -203,6 +209,7 @@ jobs:
           codesign --verify --deep --strict --verbose=2 "$app"
           spctl --assess --type execute --verbose=2 "$app"
           xcrun stapler validate "$app"
+          xcrun stapler validate "$dmg"
           spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
           mkdir -p release/macos
           cp "$dmg" release/macos/
