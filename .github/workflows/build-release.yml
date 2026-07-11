@@ -189,12 +189,20 @@ jobs:
         run: npx tauri build --bundles dmg
       - name: Verify signature and notarization ticket
         run: |
-          app=$(find src-tauri/target/release/bundle/macos -type d -name '*.app' -print -quit)
           dmg=$(find src-tauri/target/release/bundle/dmg -type f -name '*.dmg' -print -quit)
-          test -n "$app" && test -n "$dmg"
+          test -n "$dmg"
+          mount_dir=$(mktemp -d)
+          cleanup() {
+            hdiutil detach "$mount_dir" -quiet || true
+            rmdir "$mount_dir" || true
+          }
+          trap cleanup EXIT
+          hdiutil attach "$dmg" -readonly -nobrowse -mountpoint "$mount_dir"
+          app=$(find "$mount_dir" -type d -name '*.app' -print -quit)
+          test -n "$app"
           codesign --verify --deep --strict --verbose=2 "$app"
           spctl --assess --type execute --verbose=2 "$app"
-          xcrun stapler validate "$dmg"
+          xcrun stapler validate "$app"
           spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
           mkdir -p release/macos
           cp "$dmg" release/macos/
