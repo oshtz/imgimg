@@ -52,6 +52,7 @@ import { cn } from "../utils/cn";
 import logoText from "../images/logoText.svg";
 import { DiscoveryDot } from "./onboarding/DiscoveryDot";
 import { setFeatureExplored } from "../lib/onboarding";
+import { ConfirmDialog } from "./admin/ConfirmDialog";
 
 export type FakeRole = "user" | "admin";
 
@@ -841,6 +842,7 @@ export function Sidebar(props: {
   const iterateActive = props.activeView === "iterate";
   const canvasActive = props.activeView === "canvas";
   const [renamingCanvasId, setRenamingCanvasId] = useState<string | null>(null);
+  const [canvasToDelete, setCanvasToDelete] = useState<CanvasMeta | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
 
@@ -1124,7 +1126,7 @@ export function Sidebar(props: {
                       </button>
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); props.onCanvasDelete?.(canvas.id); }}
+                        onClick={(e) => { e.stopPropagation(); setCanvasToDelete(canvas); }}
                         className="rounded p-1 text-zinc-300 transition-colors hover:text-red-500 dark:text-zinc-600 dark:hover:text-red-400"
                         title="Delete canvas"
                         aria-label="Delete canvas"
@@ -1282,6 +1284,18 @@ export function Sidebar(props: {
           className="absolute inset-y-0 -right-1 w-2 cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/30"
         />
       )}
+      <ConfirmDialog
+        isOpen={canvasToDelete !== null}
+        title="Delete canvas?"
+        message={`This permanently removes “${canvasToDelete?.name ?? "this canvas"}” and its chat history.`}
+        confirmLabel="Delete"
+        onCancel={() => setCanvasToDelete(null)}
+        onConfirm={() => {
+          const id = canvasToDelete?.id;
+          setCanvasToDelete(null);
+          if (id) props.onCanvasDelete?.(id);
+        }}
+      />
     </aside>
   );
 }

@@ -2,354 +2,248 @@ name: Build Release Artifacts
 
 on:
   push:
-    branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
-    inputs:
-      build_macos:
-        description: "Build macOS DMG too (requires Apple signing/notarization secrets)"
-        required: false
-        default: false
-        type: boolean
-      create_release:
-        description: "Create a versioned GitHub release from the built artifacts"
-        required: false
-        default: false
-        type: boolean
+
+concurrency:
+  group: build-release-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  build-windows:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - run: npm ci
+      - run: npm ci --prefix web
+      - run: npm run check:versions
+      - name: Verify tag matches application version
+        if: github.ref_type == 'tag'
+        run: test "${GITHUB_REF_NAME}" = "v$(node -p "require('./package.json').version")"
+      - run: npm run build
+      - run: npm run test:coverage
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --all-targets
+      - run: npm audit --audit-level=high
+      - run: npm audit --prefix web --audit-level=high
+      - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: src-tauri
+
+  windows:
+    needs: validate
     runs-on: windows-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
-          cache: "npm"
+          cache: npm
           cache-dependency-path: |
             package-lock.json
             web/package-lock.json
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-
-      - name: Install root dependencies
-        run: npm ci
-
-      - name: Install web dependencies
-        run: npm ci --prefix web
-
-      - name: Build Windows executable
+      - run: npm ci
+      - run: npm ci --prefix web
+      - name: Build Windows application
         run: npx tauri build --no-bundle
-
-      - name: Install Enigma Virtual Box
+      - name: Install pinned Enigma Virtual Box
         shell: pwsh
         run: |
-          $evbUrl = "https://www.enigmaprotector.com/assets/files/enigmavb.exe"
-          $evbInstaller = Join-Path $env:RUNNER_TEMP "enigmavb_setup.exe"
-          $expectedEvbSha256 = "ab743f5e3dd927a288e126bbb053d367f270592e89378c9a06b7f3b15fa1ee35"
-
-          $actualEvbSha256 = $null
-          $downloadSize = 0
-          for ($attempt = 1; $attempt -le 5; $attempt++) {
-            Remove-Item -Path $evbInstaller -Force -ErrorAction SilentlyContinue
-            & curl.exe `
-              --fail `
-              --location `
-              --retry 3 `
-              --retry-delay 5 `
-              --connect-timeout 30 `
-              --max-time 180 `
-              --user-agent "imgimg-github-actions-release-builder" `
-              --output $evbInstaller `
-              $evbUrl
-            if ($LASTEXITCODE -ne 0) {
-              Write-Warning "EVB installer download attempt $attempt failed with curl exit code $LASTEXITCODE."
-            }
-
-            if (Test-Path $evbInstaller) {
-              $downloadSize = (Get-Item $evbInstaller).Length
-              if ($downloadSize -gt 1MB) {
-                $actualEvbSha256 = (Get-FileHash -Algorithm SHA256 -Path $evbInstaller).Hash.ToLowerInvariant()
-                if ($actualEvbSha256 -eq $expectedEvbSha256) {
-                  break
-                }
-                Write-Warning "EVB installer SHA-256 mismatch on attempt $attempt. Got $actualEvbSha256."
-              } else {
-                Write-Warning "EVB installer download attempt $attempt was unexpectedly small: $downloadSize bytes."
-              }
-            }
-
-            if ($attempt -lt 5) {
-              Start-Sleep -Seconds 10
-            }
+          $url = 'https://www.enigmaprotector.com/assets/files/enigmavb.exe'
+          $expectedHash = 'ab743f5e3dd927a288e126bbb053d367f270592e89378c9a06b7f3b15fa1ee35'
+          $installer = Join-Path $env:RUNNER_TEMP 'enigmavb-setup.exe'
+          & curl.exe --fail --location --retry 5 --retry-delay 5 --connect-timeout 30 --max-time 300 --output $installer $url
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to download Enigma Virtual Box.' }
+          $actualHash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -ne $expectedHash) { throw "Enigma installer hash mismatch: $actualHash" }
+          $process = Start-Process $installer -ArgumentList '/VERYSILENT','/NORESTART' -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Enigma installer failed: $($process.ExitCode)" }
+          if (-not (Test-Path 'C:\Program Files (x86)\Enigma Virtual Box\enigmavbconsole.exe')) {
+            throw 'enigmavbconsole.exe was not installed.'
           }
-
-          if ($actualEvbSha256 -ne $expectedEvbSha256) {
-            throw "EVB installer download failed validation after retries. Expected SHA-256 $expectedEvbSha256 but got $actualEvbSha256 with size $downloadSize bytes."
-          }
-
-          $process = Start-Process -FilePath $evbInstaller -ArgumentList "/VERYSILENT","/NORESTART" -Wait -PassThru
-          if ($process.ExitCode -ne 0) {
-            throw "EVB installer failed with exit code $($process.ExitCode)"
-          }
-
-          if (-not (Test-Path "C:\Program Files (x86)\Enigma Virtual Box\enigmavbconsole.exe")) {
-            throw "enigmavbconsole.exe was not installed at the expected path."
-          }
-
-      - name: Create portable exe
+      - name: Create unsigned portable executable
         shell: pwsh
         run: |
-          $inputExe = Resolve-Path "src-tauri\target\release\imgimg.exe"
-          $outputExe = Join-Path $PWD "src-tauri\target\release\imgimg-Portable.exe"
+          $inputExe = Resolve-Path 'src-tauri\target\release\imgimg.exe'
+          $releaseDir = New-Item -ItemType Directory -Force -Path 'release\windows'
+          $outputExe = Join-Path $releaseDir.FullName 'imgimg-Portable.exe'
+          $staging = New-Item -ItemType Directory -Force -Path 'evb-staging'
 
-          $webviewDll = Get-ChildItem -Path "src-tauri\target\release" -Filter "WebView2Loader.dll" -Recurse |
-            Where-Object { $_.FullName -match "\\out\\x64\\WebView2Loader\.dll$" } |
+          $webviewDll = Get-ChildItem 'src-tauri\target\release' -Recurse -Filter WebView2Loader.dll |
+            Where-Object { $_.FullName -match '\\out\\x64\\WebView2Loader\.dll$' } |
             Select-Object -First 1
-          if (-not $webviewDll) {
-            throw "x64 WebView2Loader.dll not found under src-tauri\target\release"
-          }
+          if (-not $webviewDll) { throw 'x64 WebView2Loader.dll was not found.' }
+          Copy-Item $webviewDll.FullName $staging.FullName
 
-          $evbStaging = Join-Path $PWD "evb-staging"
-          New-Item -ItemType Directory -Force -Path $evbStaging | Out-Null
-          Copy-Item -Path $webviewDll.FullName -Destination $evbStaging -Force
+          $iconDir = New-Item -ItemType Directory -Force -Path (Join-Path $staging.FullName 'icons')
+          Copy-Item 'src-tauri\icons\icon.ico' $iconDir.FullName
+          $workflowDir = New-Item -ItemType Directory -Force -Path (Join-Path $staging.FullName 'workflows')
+          Copy-Item 'workflows\*.json' $workflowDir.FullName
 
-          $iconStaging = Join-Path $evbStaging "icons"
-          New-Item -ItemType Directory -Force -Path $iconStaging | Out-Null
-          Copy-Item -Path "src-tauri\icons\icon.ico" -Destination $iconStaging -Force
+          $project = Join-Path $PWD 'imgimg.evb'
+          npx -y @insco/enigma-virtualbox@1.3.4 generate $staging.FullName --input $inputExe --output $outputExe --project-name $project
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to generate the Enigma project.' }
+          & 'C:\Program Files (x86)\Enigma Virtual Box\enigmavbconsole.exe' $project
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to build the portable executable.' }
 
-          $wfStaging = Join-Path $evbStaging "workflows"
-          New-Item -ItemType Directory -Force -Path $wfStaging | Out-Null
-          $patterns = @("replicate-*.json", "fal-*.json", "openrouter-*.json", "kie-*.json")
-          foreach ($pattern in $patterns) {
-            Get-ChildItem -Path "workflows" -Filter $pattern | ForEach-Object {
-              Copy-Item $_.FullName -Destination $wfStaging -Force
-              Write-Host "Bundled workflow: $($_.Name)"
-            }
-          }
-
-          $evbProject = Join-Path $PWD "imgimg.evb"
-          npx -y @insco/enigma-virtualbox@1.3.4 generate $evbStaging --input $inputExe --output $outputExe --project-name $evbProject
-          if ($LASTEXITCODE -ne 0) {
-            throw "enigma-virtualbox project generation failed"
-          }
-
-          $evbConsole = "C:\Program Files (x86)\Enigma Virtual Box\enigmavbconsole.exe"
-          & $evbConsole $evbProject
-          if ($LASTEXITCODE -ne 0) {
-            throw "enigmavbconsole failed"
-          }
-
-          if (-not (Test-Path $outputExe)) {
-            throw "Failed to create portable exe"
-          }
-
-          $size = [math]::Round((Get-Item $outputExe).Length / 1MB, 2)
-          Write-Host "Portable exe created: $size MB"
-
-      - name: Upload Windows portable exe
-        uses: actions/upload-artifact@v4
+          $file = Get-Item $outputExe
+          $header = [IO.File]::ReadAllBytes($file.FullName)[0..1]
+          if ($header[0] -ne 0x4d -or $header[1] -ne 0x5a) { throw 'Portable output is not a PE executable.' }
+          if ($file.Length -lt 5MB) { throw "Portable output is unexpectedly small: $($file.Length) bytes" }
+          Write-Host "Created unsigned portable executable: $([math]::Round($file.Length / 1MB, 2)) MB"
+      - uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610
         with:
-          name: imgimg-Windows-portable
-          path: src-tauri/target/release/imgimg-Portable.exe
-
-  build-macos:
-    if: ${{ github.event_name == 'push' || inputs.build_macos == true }}
-    runs-on: macos-latest
-
-    steps:
-      - name: Verify Apple signing secrets
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          path: release/windows
+          format: spdx-json
+          output-file: release/windows/imgimg-windows.spdx.json
+      - name: Create Windows checksum manifest
+        shell: pwsh
         run: |
-          missing=()
-          [ -z "$APPLE_CERTIFICATE" ] && missing+=("APPLE_CERTIFICATE")
-          [ -z "$APPLE_CERTIFICATE_PASSWORD" ] && missing+=("APPLE_CERTIFICATE_PASSWORD")
-          [ -z "$APPLE_SIGNING_IDENTITY" ] && missing+=("APPLE_SIGNING_IDENTITY")
-          [ -z "$APPLE_ID" ] && missing+=("APPLE_ID")
-          [ -z "$APPLE_PASSWORD" ] && missing+=("APPLE_PASSWORD")
-          [ -z "$APPLE_TEAM_ID" ] && missing+=("APPLE_TEAM_ID")
-          if [ ${#missing[@]} -gt 0 ]; then
-            echo "::error::Missing required secrets: ${missing[*]}"
-            echo "All Apple signing and notarization secrets must be configured before the macOS build can run."
-            exit 1
-          fi
-          echo "All required Apple secrets are configured."
+          $files = Get-ChildItem 'release\windows' -File | Where-Object Name -ne 'SHA256SUMS-windows.txt'
+          $lines = foreach ($file in $files) {
+            "{0}  {1}" -f (Get-FileHash $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $file.Name
+          }
+          $lines | Set-Content 'release\windows\SHA256SUMS-windows.txt'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: imgimg-windows
+          path: release/windows/*
 
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+  macos:
+    needs: validate
+    runs-on: macos-15
+    env:
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Apple signing and notarization secrets
+        run: |
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            test -n "${!name}" || { echo "::error::Missing $name"; exit 1; }
+          done
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
-          cache: "npm"
+          cache: npm
           cache-dependency-path: |
             package-lock.json
             web/package-lock.json
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-
-      - name: Install root dependencies
-        run: npm ci
-
-      - name: Install web dependencies
-        run: npm ci --prefix web
-
-      - name: Import Apple certificate
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      - run: npm ci
+      - run: npm ci --prefix web
+      - name: Import Apple signing certificate
         run: |
-          echo "$APPLE_CERTIFICATE" | base64 --decode > /tmp/apple_cert.p12
-          KEYCHAIN_PASSWORD="$(uuidgen)"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-          security set-keychain-settings -t 3600 -u build.keychain
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-          security import /tmp/apple_cert.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -A
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
-          security list-keychains -d user -s build.keychain
-          security default-keychain -s build.keychain
-          security find-identity -v -p codesigning build.keychain
-
-      - name: Store notarization credentials
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          keychain="$RUNNER_TEMP/imgimg-build.keychain-db"
+          password=$(uuidgen)
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$keychain" -P "$APPLE_CERTIFICATE_PASSWORD" -A
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" "$keychain"
+          security list-keychains -d user -s "$keychain"
+          security default-keychain -s "$keychain"
+          security find-identity -v -p codesigning "$keychain" | grep -q '1)'
+          echo "BUILD_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+      - name: Verify notarization credentials
         run: |
-          xcrun notarytool store-credentials "notarytool-profile" \
+          xcrun notarytool store-credentials imgimg-ci \
             --apple-id "$APPLE_ID" \
             --team-id "$APPLE_TEAM_ID" \
             --password "$APPLE_PASSWORD"
-
-      - name: Build Tauri app (dmg)
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          RUST_LOG: tauri_bundler=debug
-          RUST_BACKTRACE: 1
+      - name: Build signed and notarized Apple Silicon DMG
         run: npx tauri build --bundles dmg
-
-      - name: Upload dmg
-        uses: actions/upload-artifact@v4
+      - name: Verify signature and notarization ticket
+        run: |
+          app=$(find src-tauri/target/release/bundle/macos -type d -name '*.app' -print -quit)
+          dmg=$(find src-tauri/target/release/bundle/dmg -type f -name '*.dmg' -print -quit)
+          test -n "$app" && test -n "$dmg"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          spctl --assess --type execute --verbose=2 "$app"
+          xcrun stapler validate "$dmg"
+          spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
+          mkdir -p release/macos
+          cp "$dmg" release/macos/
+      - uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610
         with:
-          name: imgimg-macOS-dmg
-          path: src-tauri/target/release/bundle/dmg/*.dmg
+          path: release/macos
+          format: spdx-json
+          output-file: release/macos/imgimg-macos.spdx.json
+      - name: Create macOS checksum manifest
+        run: |
+          cd release/macos
+          shasum -a 256 imgimg_*.dmg imgimg-macos.spdx.json > SHA256SUMS-macos.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: imgimg-macos
+          path: release/macos/*
+      - name: Remove temporary keychain
+        if: always()
+        run: |
+          if [ -n "${BUILD_KEYCHAIN:-}" ]; then security delete-keychain "$BUILD_KEYCHAIN" || true; fi
 
   release:
-    if: ${{ always() && needs.build-windows.result == 'success' && (needs.build-macos.result == 'success' || needs.build-macos.result == 'skipped') && (github.event_name == 'push' || inputs.create_release == true) }}
-    needs: [build-windows, build-macos]
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: [validate, windows, macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Determine release tag
-        id: release_tag
-        run: |
-          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
-          if [ -z "$version" ]; then
-            echo "::error::tauri.conf.json version not found"
-            exit 1
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
-            echo "name=Latest main build" >> "$GITHUB_OUTPUT"
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=v$version" >> "$GITHUB_OUTPUT"
-            echo "name=imgimg v$version" >> "$GITHUB_OUTPUT"
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
           path: artifacts
-
-      - name: Collect release files
+      - name: Stage and checksum release assets
         run: |
-          mkdir -p release-files
-          find artifacts -type f \( -name "*.exe" -o -name "*.msi" -o -name "*.dmg" \) -exec cp {} release-files/ \;
-          test "$(find release-files -type f | wc -l)" -gt 0
-
-      - name: Publish GitHub release
+          mkdir release-files
+          while IFS= read -r -d '' file; do
+            name=$(basename "$file")
+            test ! -e "release-files/$name" || { echo "::error::Duplicate release asset: $name"; exit 1; }
+            cp "$file" "release-files/$name"
+          done < <(find artifacts -type f -print0)
+          cd release-files
+          find . -maxdepth 1 -type f ! -name SHA256SUMS.txt -printf '%f\0' | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
+      - name: Publish immutable GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.release_tag.outputs.tag }}
-          RELEASE_NAME: ${{ steps.release_tag.outputs.name }}
-          RELEASE_PRERELEASE: ${{ steps.release_tag.outputs.prerelease }}
+          TAG: ${{ github.ref_name }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if [ "$RELEASE_TAG" = "latest" ]; then
-            git tag -f "$RELEASE_TAG" "$GITHUB_SHA"
-            git push --force origin "refs/tags/$RELEASE_TAG"
-          elif git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Using existing tag $RELEASE_TAG"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            draft=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)
+            test "$draft" = true || { echo "::error::Release $TAG is already published and will not be overwritten."; exit 1; }
           else
-            git tag "$RELEASE_TAG" "$GITHUB_SHA"
-            git push origin "refs/tags/$RELEASE_TAG"
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft --title "imgimg $TAG" --notes-file RELEASE_NOTES.md
           fi
-
-          notes="Automated build from ${GITHUB_SHA}."
-          release_flags=(--title "$RELEASE_NAME" --target "$GITHUB_SHA" --notes "$notes")
-          if [ "$RELEASE_PRERELEASE" = "true" ]; then
-            release_flags+=(--prerelease --latest=false)
-          else
-            release_flags+=(--latest)
-          fi
-
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            if [ "$RELEASE_PRERELEASE" != "true" ]; then
-              release_flags+=(--prerelease=false)
-            fi
-            gh release edit "$RELEASE_TAG" "${release_flags[@]}"
-            mapfile -t current_assets < <(find release-files -type f -printf '%f\n')
-            while IFS= read -r existing_asset; do
-              keep_asset=false
-              for current_asset in "${current_assets[@]}"; do
-                if [ "$existing_asset" = "$current_asset" ]; then
-                  keep_asset=true
-                  break
-                fi
-              done
-              if [ "$keep_asset" = false ]; then
-                gh release delete-asset "$RELEASE_TAG" "$existing_asset" --yes
-              fi
-            done < <(gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name')
-            gh release upload "$RELEASE_TAG" release-files/* --clobber
-          else
-            gh release create "$RELEASE_TAG" release-files/* "${release_flags[@]}"
-          fi
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber release-files/*
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest

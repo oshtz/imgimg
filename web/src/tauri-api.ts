@@ -180,6 +180,20 @@ export async function deleteGeneration(id: string) {
   return invoke("delete_generation", { id });
 }
 
+export async function cancelGeneration(id: string) {
+  return invoke<Generation>("cancel_generation", { id });
+}
+
+export async function retryGeneration(id: string) {
+  return invoke<Generation>("retry_generation", { id });
+}
+
+export type QueuedGenerationOperation = {
+  generationId: string;
+  jobId: string;
+  queuePosition: number;
+};
+
 export async function getAssetVersions(
   generationId: string,
   assetType: string,
@@ -205,7 +219,7 @@ export async function regenerateItem(
   assetType?: string,
   seed?: number
 ) {
-  return invoke<Asset>("regenerate_item", {
+  return invoke<QueuedGenerationOperation>("regenerate_item", {
     generationId,
     itemIndex: itemIndex ?? null,
     assetType: assetType ?? null,
@@ -222,7 +236,7 @@ export async function createInpaint(
   imageDataUrl: string,
   maskDataUrl: string
 ) {
-  return invoke<Asset>("create_inpaint", {
+  return invoke<QueuedGenerationOperation>("create_inpaint", {
     generationId,
     assetType,
     itemIndex: itemIndex ?? null,
@@ -233,8 +247,8 @@ export async function createInpaint(
   });
 }
 
-export async function downloadGenerationAssetsZip(generationId: string) {
-  return invoke<number[]>("download_generation_assets_zip", { generationId });
+export async function exportGenerationAssetsZip(generationId: string, destination: string) {
+  return invoke("export_generation_assets_zip", { generationId, destination });
 }
 
 export async function removeBackground(
@@ -242,7 +256,7 @@ export async function removeBackground(
   itemIndex: number,
   workflow: Record<string, unknown>
 ) {
-  return invoke<Asset>("remove_background", {
+  return invoke<QueuedGenerationOperation>("remove_background", {
     generationId,
     itemIndex,
     workflow,
@@ -352,10 +366,14 @@ export async function deleteChatThread(id: string) {
 /** Raw admin settings record returned by the Tauri backend — includes actual
  * API key values (the HTTP-API equivalent `AdminSettingsSummary` strips them). */
 export type TauriAdminSettings = {
-  openrouterApiKey?: string | null;
-  replicateApiKey?: string | null;
-  falApiKey?: string | null;
-  kieApiKey?: string | null;
+  openrouterApiKeyPresent?: boolean;
+  openrouterApiKeyHint?: string | null;
+  replicateApiKeyPresent?: boolean;
+  replicateApiKeyHint?: string | null;
+  falApiKeyPresent?: boolean;
+  falApiKeyHint?: string | null;
+  kieApiKeyPresent?: boolean;
+  kieApiKeyHint?: string | null;
   adminEmails?: string[] | null;
   allowedEmailDomains?: string[] | null;
   comfyBaseUrls?: string[] | null;
@@ -385,40 +403,32 @@ export async function getDefaultSystemPrompts() {
   return invoke<Record<string, string>>("get_default_system_prompts");
 }
 
-export async function updateAdminSettings(settings: TauriAdminSettings) {
-  return invoke("update_admin_settings", { settings });
+export type TauriAdminSettingsPatch = Omit<
+  TauriAdminSettings,
+  | "openrouterApiKeyPresent"
+  | "openrouterApiKeyHint"
+  | "replicateApiKeyPresent"
+  | "replicateApiKeyHint"
+  | "falApiKeyPresent"
+  | "falApiKeyHint"
+  | "kieApiKeyPresent"
+  | "kieApiKeyHint"
+> & {
+  openrouterApiKey?: string | null;
+  replicateApiKey?: string | null;
+  falApiKey?: string | null;
+  kieApiKey?: string | null;
+};
+
+export async function updateAdminSettings(settings: TauriAdminSettingsPatch) {
+  return invoke<TauriAdminSettings>("update_admin_settings", { settings });
 }
 
-export async function getOpenrouterApiKey() {
-  return invoke<string | null>("get_openrouter_api_key");
-}
-
-export async function setOpenrouterApiKey(value: string | null) {
-  return invoke("set_openrouter_api_key", { value });
-}
-
-export async function getReplicateApiKey() {
-  return invoke<string | null>("get_replicate_api_key");
-}
-
-export async function setReplicateApiKey(value: string | null) {
-  return invoke("set_replicate_api_key", { value });
-}
-
-export async function getFalApiKey() {
-  return invoke<string | null>("get_fal_api_key");
-}
-
-export async function setFalApiKey(value: string | null) {
-  return invoke("set_fal_api_key", { value });
-}
-
-export async function getKieApiKey() {
-  return invoke<string | null>("get_kie_api_key");
-}
-
-export async function setKieApiKey(value: string | null) {
-  return invoke("set_kie_api_key", { value });
+export async function verifyProviderCredential(provider: string, candidate: string) {
+  return invoke<{
+    state: "verified" | "configured_unverified" | "invalid" | "unreachable";
+    message: string | null;
+  }>("verify_provider_credential", { provider, candidate });
 }
 
 // ──────────── Models / LoRA ────────────
@@ -640,10 +650,6 @@ export async function getStorageBasePath() {
   return invoke<string>("get_storage_base_path");
 }
 
-export async function getStorageFile(url: string) {
-  return invoke<number[]>("get_storage_file", { url });
-}
-
 export async function openStorageFolder() {
   return invoke<void>("open_storage_folder");
 }
@@ -652,19 +658,15 @@ export async function openExternalUrl(url: string) {
   return invoke<void>("open_external_url", { url });
 }
 
-export async function uploadToStorage(
-  generationId: string,
-  filename: string,
-  data: number[]
-) {
-  return invoke<string>("upload_to_storage", {
-    generationId,
-    filename,
-    data,
-  });
+export async function getWorkspaceState<T>(key: "iterate_threads" | "audio_metadata") {
+  return invoke<T | null>("get_workspace_state", { key });
 }
 
-// ──────────── Portable updater ────────────
+export async function saveWorkspaceState<T>(key: "iterate_threads" | "audio_metadata", value: T) {
+  return invoke<void>("save_workspace_state", { key, value });
+}
+
+// ──────────── Application metadata ────────────
 
 export type AppInfo = {
   name: string;
@@ -674,24 +676,6 @@ export type AppInfo = {
 
 export async function getAppInfo() {
   return invoke<AppInfo>("get_app_info");
-}
-
-export type PortableUpdateStatus = {
-  currentVersion: string;
-  latestVersion: string | null;
-  updateAvailable: boolean;
-  releaseUrl: string | null;
-  assetName: string | null;
-  downloadUrl: string | null;
-  body: string | null;
-};
-
-export async function checkPortableUpdate() {
-  return invoke<PortableUpdateStatus>("check_portable_update");
-}
-
-export async function installPortableUpdate(downloadUrl: string) {
-  return invoke<void>("install_portable_update", { downloadUrl });
 }
 
 // ──────────── Compare ────────────

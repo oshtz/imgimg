@@ -9,7 +9,7 @@ use crate::config::AppConfig;
 use crate::db::models::Asset;
 use crate::error::{AppError, AppResult};
 use crate::providers::common::{
-    build_data_url, download_bytes, extension_from_content_type, key_headers,
+    build_data_url, download_asset, download_bytes, extension_from_content_type, key_headers,
     timestamp_suffix,
 };
 use crate::services::storage::LocalStorage;
@@ -30,23 +30,23 @@ impl FalProxy {
         storage: Arc<LocalStorage>,
         db: SqlitePool,
     ) -> Self {
-        Self { http_client, config, storage, db }
+        Self {
+            http_client,
+            config,
+            storage,
+            db,
+        }
     }
 
     pub async fn get_api_key(&self) -> AppResult<String> {
         if let Some(key) = crate::stores::admin_settings::get_fal_api_key(&self.db).await? {
             return Ok(key);
         }
-        if let Some(ref key) = self.config.fal_api_key {
-            if !key.is_empty() {
-                return Ok(key.clone());
-            }
-        }
         Err(AppError::Config("fal.ai API key not configured".into()))
     }
 
     pub async fn check_health(&self) -> bool {
-        self.get_api_key().await.is_ok()
+        false
     }
 
     /// Resolve a file input for fal.ai. Storage/local URLs are converted to data URLs.
@@ -84,7 +84,11 @@ impl FalProxy {
         let mut resolved_input = input.clone();
         if let Some(obj) = resolved_input.as_object_mut() {
             for key in file_input_keys {
-                if let Some(val) = obj.get(*key).and_then(|v| v.as_str()).map(|s| s.to_string()) {
+                if let Some(val) = obj
+                    .get(*key)
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                {
                     let resolved = self.resolve_input_file(&val).await?;
                     obj.insert(key.to_string(), serde_json::Value::String(resolved));
                 }
@@ -150,8 +154,8 @@ impl FalProxy {
     }
 
     async fn poll_status(&self, status_url: &str, api_key: &str) -> AppResult<()> {
-        let deadline = tokio::time::Instant::now()
-            + Duration::from_millis(self.config.fal_timeout_ms);
+        let deadline =
+            tokio::time::Instant::now() + Duration::from_millis(self.config.fal_timeout_ms);
         let interval = self.config.fal_poll_interval_ms;
 
         loop {
@@ -179,9 +183,7 @@ impl FalProxy {
             }
 
             if tokio::time::Instant::now() >= deadline {
-                return Err(AppError::Timeout(
-                    "fal.ai job polling timed out".into(),
-                ));
+                return Err(AppError::Timeout("fal.ai job polling timed out".into()));
             }
 
             tokio::time::sleep(Duration::from_millis(interval)).await;
@@ -207,7 +209,6 @@ impl FalProxy {
             return Err(AppError::ProviderError("No output URL from fal.ai".into()));
         }
 
-        let (bytes, _) = download_bytes(&self.http_client, &output_url, None, 60_000).await?;
         let ext = extension_from_content_type(&content_type);
         let filename = format!(
             "{}_{}.{}",
@@ -216,9 +217,18 @@ impl FalProxy {
             ext
         );
 
-        self.storage
-            .write_binary_asset(generation_id, asset_type, item_index, &filename, &bytes)
-            .await
+        download_asset(
+            &self.http_client,
+            &self.storage,
+            &output_url,
+            None,
+            60_000,
+            generation_id,
+            asset_type,
+            item_index,
+            &filename,
+        )
+        .await
     }
 }
 

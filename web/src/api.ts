@@ -7,28 +7,6 @@
 
 export type ApiBaseUrl = `http${string}` | string;
 
-const sessionStorageKey = "imgimg.sessionId.v1";
-
-export function getSessionId() {
-  try {
-    let sessionId = localStorage.getItem(sessionStorageKey);
-    if (!sessionId) {
-      sessionId =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `sess_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
-      localStorage.setItem(sessionStorageKey, sessionId);
-    }
-    return sessionId;
-  } catch {
-    return null;
-  }
-}
-
-export function buildAuthHeaders(): Record<string, string> {
-  return {};
-}
-
 // ========== Provider Status Types ==========
 
 export interface ComfyInstanceStatus {
@@ -43,24 +21,30 @@ export interface ComfyUIStatus {
   totalCount: number;
 }
 
+export type ProviderConnectionState = "unconfigured" | "configured_unverified" | "verified" | "invalid" | "unreachable";
+
 export interface OpenRouterStatus {
   available: boolean;
   hasApiKey: boolean;
+  state?: ProviderConnectionState;
 }
 
 export interface ReplicateStatus {
   available: boolean;
   hasApiKey: boolean;
+  state?: ProviderConnectionState;
 }
 
 export interface FalStatus {
   available: boolean;
   hasApiKey: boolean;
+  state?: ProviderConnectionState;
 }
 
 export interface KieStatus {
   available: boolean;
   hasApiKey: boolean;
+  state?: ProviderConnectionState;
 }
 
 export interface ProviderStatus {

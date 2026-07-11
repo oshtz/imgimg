@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { listCanvases, listCanvasesAsync, createCanvas, deleteCanvas as deleteCanvasMeta, renameCanvas, getCanvasStateAsync } from "../canvas/canvasStorage";
 import { isTauri } from "../tauri-api";
+import * as tauriApi from "../tauri-api";
+import { toast } from "sonner";
 import { getCanvasState, type ApiBaseUrl } from "../client";
 import { resolveStorageUrl } from "../utils/assets";
 import { usePersistedState } from "./usePersistedState";
@@ -29,7 +31,6 @@ export function useCanvasManager(
   useEffect(() => {
     const MIGRATION_KEY = "imgimg.canvasMigrated";
     if (localStorage.getItem(MIGRATION_KEY)) return;
-    localStorage.setItem(MIGRATION_KEY, "1");
 
     (async () => {
       try {
@@ -41,38 +42,29 @@ export function useCanvasManager(
             } catch { return []; }
           })();
           for (const meta of localCanvases) {
-            try {
-              const rawState = localStorage.getItem(`imgimg.canvas.state.${meta.id}`);
-              const state = rawState ? JSON.parse(rawState) : null;
-              await (await import("../tauri-api")).createCanvas(meta.id, meta.name);
-              if (state) {
-                await (await import("../tauri-api")).saveCanvasState({
-                  gameId: meta.id,
-                  nodes: state.nodes ?? [],
-                  chatMessages: state.chatMessages ?? [],
-                  chatWorkflowId: state.chatWorkflowId,
-                  nextZIndex: state.nextZIndex ?? 1,
-                });
-              }
-            } catch {
-              // Canvas may already exist in SQLite, skip
-            }
-          }
-          try {
-            const defaultState = await (await import("../tauri-api")).getCanvasState("default");
-            if (defaultState && ((defaultState as any).nodes?.length > 0 || (defaultState as any).chatMessages?.length > 0)) {
-              const canvas = createCanvas("Canvas (migrated)");
-              await (await import("../tauri-api")).createCanvas(canvas.id, canvas.name);
-              await (await import("../tauri-api")).saveCanvasState({
-                gameId: canvas.id,
-                nodes: (defaultState as any).nodes ?? [],
-                chatMessages: (defaultState as any).chatMessages ?? [],
-                chatWorkflowId: (defaultState as any).chatWorkflowId,
-                nextZIndex: (defaultState as any).nextZIndex ?? 1,
+            const rawState = localStorage.getItem(`imgimg.canvas.state.${meta.id}`);
+            const state = rawState ? JSON.parse(rawState) : null;
+            await tauriApi.createCanvas(meta.id, meta.name);
+            if (state) {
+              await tauriApi.saveCanvasState({
+                gameId: meta.id,
+                nodes: state.nodes ?? [],
+                chatMessages: state.chatMessages ?? [],
+                chatWorkflowId: state.chatWorkflowId,
+                nextZIndex: state.nextZIndex ?? 1,
               });
             }
-          } catch {
-            // No default canvas to migrate
+          }
+          const defaultState = await tauriApi.getCanvasState("default");
+          if (defaultState && ((defaultState as any).nodes?.length > 0 || (defaultState as any).chatMessages?.length > 0)) {
+            const canvas = await createCanvas("Canvas (migrated)");
+            await tauriApi.saveCanvasState({
+              gameId: canvas.id,
+              nodes: (defaultState as any).nodes ?? [],
+              chatMessages: (defaultState as any).chatMessages ?? [],
+              chatWorkflowId: (defaultState as any).chatWorkflowId,
+              nextZIndex: (defaultState as any).nextZIndex ?? 1,
+            });
           }
           const list = await listCanvasesAsync();
           setCanvases(list);
@@ -82,21 +74,22 @@ export function useCanvasManager(
         } else {
           const serverState = await getCanvasState(apiBaseUrl);
           const hasData = serverState.nodes.length > 0 || serverState.chatMessages.length > 0;
-          if (!hasData) return;
-
-          const canvas = createCanvas("Canvas");
-          putCanvasLocalState(canvas.id, {
-            nodes: serverState.nodes,
-            chatMessages: serverState.chatMessages,
-            chatWorkflowId: serverState.chatWorkflowId,
-            nextZIndex: serverState.nextZIndex,
-          });
-          setCanvases(listCanvases());
-          setActiveCanvasId(canvas.id);
-          setActiveView("canvas");
+          if (hasData) {
+            const canvas = await createCanvas("Canvas");
+            await putCanvasLocalState(canvas.id, {
+              nodes: serverState.nodes,
+              chatMessages: serverState.chatMessages,
+              chatWorkflowId: serverState.chatWorkflowId,
+              nextZIndex: serverState.nextZIndex,
+            });
+            setCanvases(listCanvases());
+            setActiveCanvasId(canvas.id);
+            setActiveView("canvas");
+          }
         }
-      } catch {
-        // Migration errors are non-fatal — skip
+        localStorage.setItem(MIGRATION_KEY, "1");
+      } catch (error) {
+        console.error("Canvas migration failed; it will retry next launch:", error);
       }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -113,30 +106,44 @@ export function useCanvasManager(
     return list;
   }, []);
 
-  const handleCanvasCreate = useCallback(() => {
-    const canvas = createCanvas(`Canvas ${canvases.length + 1}`);
-    setCanvases(listCanvases());
-    setActiveCanvasId(canvas.id);
-    setActiveView("canvas");
+  const handleCanvasCreate = useCallback(async () => {
+    try {
+      const canvas = await createCanvas(`Canvas ${canvases.length + 1}`);
+      setCanvases((current) => [...current, canvas]);
+      setActiveCanvasId(canvas.id);
+      setActiveView("canvas");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not create canvas");
+    }
   }, [canvases.length, setActiveCanvasId, setActiveView]);
 
-  const handleCanvasDelete = useCallback((id: string) => {
-    deleteCanvasMeta(id);
-    const remaining = canvases.filter((c) => c.id !== id);
-    setCanvases(remaining);
-    if (activeCanvasId === id) {
-      if (remaining.length > 0) {
-        setActiveCanvasId(remaining[0].id);
-      } else {
-        setActiveCanvasId(null);
-        setActiveView("generate");
+  const handleCanvasDelete = useCallback(async (id: string) => {
+    try {
+      await deleteCanvasMeta(id);
+      const remaining = canvases.filter((canvas) => canvas.id !== id);
+      setCanvases(remaining);
+      if (activeCanvasId === id) {
+        if (remaining.length > 0) {
+          setActiveCanvasId(remaining[0].id);
+        } else {
+          setActiveCanvasId(null);
+          setActiveView("generate");
+        }
       }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not delete canvas");
     }
-  }, [canvases, activeCanvasId, setActiveCanvasId, setActiveView]);
+  }, [activeCanvasId, canvases, setActiveCanvasId, setActiveView]);
 
-  const handleCanvasRename = useCallback((id: string, name: string) => {
-    renameCanvas(id, name);
-    setCanvases(listCanvases());
+  const handleCanvasRename = useCallback(async (id: string, name: string) => {
+    try {
+      await renameCanvas(id, name);
+      setCanvases((current) => current.map((canvas) => (
+        canvas.id === id ? { ...canvas, name } : canvas
+      )));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not rename canvas");
+    }
   }, []);
 
   const handleCanvasSelect = useCallback((id: string) => {

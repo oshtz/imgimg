@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+﻿import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// Mock localStorage for re-exported getSessionId / buildAuthHeaders
+// Mock localStorage for client-side preference helpers used by imported modules.
 const storage = new Map<string, string>();
 vi.stubGlobal("localStorage", {
   getItem: (key: string) => storage.get(key) ?? null,
@@ -11,6 +11,9 @@ vi.stubGlobal("localStorage", {
 
 // Mock fetch globally
 vi.stubGlobal("fetch", vi.fn());
+
+const mockSave = vi.hoisted(() => vi.fn().mockResolvedValue("C:/exports/generation_gen-zip.zip"));
+vi.mock("@tauri-apps/plugin-dialog", () => ({ save: mockSave }));
 
 // Mock entire tauri-api module so client.ts imports don't blow up
 const mockTauri = vi.hoisted(() => ({
@@ -35,12 +38,14 @@ const mockTauri = vi.hoisted(() => ({
   setActiveAssetVersion: vi.fn(),
   getGeneration: vi.fn().mockResolvedValue({ assets: [] }),
   deleteGeneration: vi.fn(),
+  cancelGeneration: vi.fn(),
+  retryGeneration: vi.fn(),
   listAssetTypes: vi.fn().mockResolvedValue([]),
   getPresets: vi.fn().mockResolvedValue([]),
-  regenerateItem: vi.fn().mockResolvedValue({ id: "a1", url: "" }),
-  createInpaint: vi.fn(),
-  removeBackground: vi.fn().mockResolvedValue({ id: "a2", url: "" }),
-  downloadGenerationAssetsZip: vi.fn().mockResolvedValue(new Uint8Array(0)),
+  regenerateItem: vi.fn().mockResolvedValue({ generationId: "gen-1", jobId: "job-regen", queuePosition: 1 }),
+  createInpaint: vi.fn().mockResolvedValue({ generationId: "gen-1", jobId: "job-inpaint", queuePosition: 1 }),
+  removeBackground: vi.fn().mockResolvedValue({ generationId: "gen-1", jobId: "job-rembg", queuePosition: 1 }),
+  exportGenerationAssetsZip: vi.fn(),
   streamEnhancedPrompt: vi.fn(),
   exploreVariants: vi.fn().mockResolvedValue([]),
   getCanvasState: vi.fn().mockResolvedValue(null),
@@ -54,7 +59,7 @@ const mockTauri = vi.hoisted(() => ({
   upsertWorkflow: vi.fn(),
   getAdminSettings: vi.fn().mockResolvedValue({}),
   getDefaultSystemPrompts: vi.fn().mockResolvedValue({ canvasAgent: "", promptEnhancer: "" }),
-  updateAdminSettings: vi.fn(),
+  updateAdminSettings: vi.fn().mockResolvedValue({}),
   getFeatureWorkflowConfig: vi.fn().mockResolvedValue({ inpaintWorkflowId: null, outpaintWorkflowId: null, rembgWorkflowId: null }),
   getCompareModels: vi.fn().mockResolvedValue([]),
   getCompareGroups: vi.fn().mockResolvedValue([]),
@@ -71,28 +76,9 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-// ── Re-exported utilities ──
+// ג”€ג”€ Re-exported utilities ג”€ג”€
 
-describe("client re-exports", () => {
-  it("exports getSessionId function", () => {
-    expect(typeof client.getSessionId).toBe("function");
-  });
-
-  it("exports buildAuthHeaders function", () => {
-    expect(typeof client.buildAuthHeaders).toBe("function");
-  });
-
-  it("getSessionId returns a string", () => {
-    const id = client.getSessionId();
-    expect(typeof id).toBe("string");
-  });
-
-  it("buildAuthHeaders returns empty object", () => {
-    expect(client.buildAuthHeaders()).toEqual({});
-  });
-});
-
-// ── Exported function existence checks ──
+// ג”€ג”€ Exported function existence checks ג”€ג”€
 
 describe("client exported functions", () => {
   it("exports getHealth", () => {
@@ -156,7 +142,7 @@ describe("client exported functions", () => {
   });
 });
 
-// ── getWorkflows ──
+// ג”€ג”€ getWorkflows ג”€ג”€
 
 describe("getWorkflows", () => {
   it("returns workflows array, pinnedWorkflowIds, and organization", async () => {
@@ -328,7 +314,7 @@ describe("getWorkflows", () => {
   });
 });
 
-// ── getModels ──
+// ג”€ג”€ getModels ג”€ג”€
 
 describe("getModels", () => {
   it("returns models array and meta", async () => {
@@ -362,7 +348,7 @@ describe("getModels", () => {
   });
 });
 
-// ── createGeneration ──
+// ג”€ג”€ createGeneration ג”€ג”€
 
 describe("createGeneration", () => {
   it("returns generationId and jobId", async () => {
@@ -428,7 +414,7 @@ describe("createGeneration", () => {
   });
 });
 
-// ── getMyGenerations / getAdminGenerations ──
+// ג”€ג”€ getMyGenerations / getAdminGenerations ג”€ג”€
 
 describe("getMyGenerations", () => {
   it("returns generations array", async () => {
@@ -454,7 +440,7 @@ describe("getAdminGenerations", () => {
   });
 });
 
-// ── getGallery ──
+// ג”€ג”€ getGallery ג”€ג”€
 
 describe("getGallery", () => {
   it("returns items and nextCursor", async () => {
@@ -488,7 +474,7 @@ describe("getGallery", () => {
   });
 });
 
-// ── getCanvasState ──
+// ג”€ג”€ getCanvasState ג”€ג”€
 
 describe("getCanvasState", () => {
   it("returns default state when tauri returns null", async () => {
@@ -516,7 +502,7 @@ describe("getCanvasState", () => {
   });
 });
 
-// ── putCanvasState ──
+// ג”€ג”€ putCanvasState ג”€ג”€
 
 describe("putCanvasState", () => {
   it("calls tauri.saveCanvasState with correct params", async () => {
@@ -555,7 +541,7 @@ describe("putCanvasState", () => {
   });
 });
 
-// ── getWorkflowPreviews ──
+// ג”€ג”€ getWorkflowPreviews ג”€ג”€
 
 describe("getWorkflowPreviews", () => {
   it("returns empty object", async () => {
@@ -564,19 +550,19 @@ describe("getWorkflowPreviews", () => {
   });
 });
 
-// ── regenerateItem ──
+// ג”€ג”€ regenerateItem ג”€ג”€
 
 describe("regenerateItem", () => {
-  it("returns generation info with asset", async () => {
+  it("returns the queued operation", async () => {
     const result = await client.regenerateItem("http://localhost", "gen-1", {
       itemIndex: 0,
       assetType: "image",
       seed: 42,
     });
     expect(result.generationId).toBe("gen-1");
-    expect(result.jobId).toBe("");
-    expect(result.queuePosition).toBe(0);
-    expect(result.assets).toEqual([{ id: "a1", url: "" }]);
+    expect(result.jobId).toBe("job-regen");
+    expect(result.queuePosition).toBe(1);
+    expect(result.assets).toBeUndefined();
   });
 
   it("passes correct arguments to tauri.regenerateItem", async () => {
@@ -589,7 +575,7 @@ describe("regenerateItem", () => {
   });
 });
 
-// ── createInpaintAssetVersion ──
+// ג”€ג”€ createInpaintAssetVersion ג”€ג”€
 
 describe("createInpaintAssetVersion", () => {
   it("calls tauri.createInpaint and returns correct shape", async () => {
@@ -605,34 +591,36 @@ describe("createInpaintAssetVersion", () => {
       "gen-1", "image", 0, "fix this", 7, "data:image", "data:mask"
     );
     expect(result.generationId).toBe("gen-1");
-    expect(result.jobId).toBe("");
-    expect(result.queuePosition).toBe(0);
+    expect(result.jobId).toBe("job-inpaint");
+    expect(result.queuePosition).toBe(1);
   });
 });
 
-// ── removeBackground ──
+// ג”€ג”€ removeBackground ג”€ג”€
 
 describe("removeBackground", () => {
-  it("returns asset with correct shape", async () => {
+  it("returns the queued operation", async () => {
     const result = await client.removeBackground("http://localhost", "gen-1", { itemIndex: 1 });
     expect(result.generationId).toBe("gen-1");
     expect(result.itemIndex).toBe(1);
-    expect(result.asset.id).toBe("a2");
+    expect(result.jobId).toBe("job-rembg");
+    expect(result.queuePosition).toBe(1);
     expect(result.alreadyExists).toBe(false);
   });
 });
 
-// ── downloadGenerationAssetsZip ──
+// ג”€ג”€ downloadGenerationAssetsZip ג”€ג”€
 
 describe("downloadGenerationAssetsZip", () => {
-  it("returns blob and filename", async () => {
+  it("exports directly to the chosen path", async () => {
     const result = await client.downloadGenerationAssetsZip("http://localhost", "gen-zip");
-    expect(result.blob).toBeInstanceOf(Blob);
+    expect(mockTauri.exportGenerationAssetsZip).toHaveBeenCalledWith("gen-zip", "C:/exports/generation_gen-zip.zip");
+    expect(result.saved).toBe(true);
     expect(result.filename).toBe("generation_gen-zip.zip");
   });
 });
 
-// ── generatePromptVariants ──
+// ג”€ג”€ generatePromptVariants ג”€ג”€
 
 describe("generatePromptVariants", () => {
   it("wraps tauri.exploreVariants into { variants } shape", async () => {
@@ -647,7 +635,7 @@ describe("generatePromptVariants", () => {
   });
 });
 
-// ── setActiveAssetVersion ──
+// ג”€ג”€ setActiveAssetVersion ג”€ג”€
 
 describe("setActiveAssetVersion", () => {
   it("calls tauri and returns assets from getGeneration", async () => {
@@ -661,7 +649,7 @@ describe("setActiveAssetVersion", () => {
   });
 });
 
-// ── searchProviderModels ──
+// ג”€ג”€ searchProviderModels ג”€ג”€
 
 describe("searchProviderModels", () => {
   it("passes correct params to tauri", async () => {
@@ -674,7 +662,7 @@ describe("searchProviderModels", () => {
   });
 });
 
-// ── createOutpaintGeneration ──
+// ג”€ג”€ createOutpaintGeneration ג”€ג”€
 
 describe("createOutpaintGeneration", () => {
   it("delegates to createGeneration with outpaint params as workflowParams", async () => {
@@ -710,15 +698,18 @@ describe("createOutpaintGeneration", () => {
   });
 });
 
-// ── getAdminSettings ──
+// ג”€ג”€ getAdminSettings ג”€ג”€
 
 describe("getAdminSettings", () => {
-  it("masks API keys correctly", async () => {
+  it("uses backend-redacted API key summaries", async () => {
     mockTauri.getAdminSettings.mockResolvedValueOnce({
-      openrouterApiKey: "sk-abcdefghijklmnop",
-      replicateApiKey: null,
-      falApiKey: "fal-1234567890abcdef",
-      kieApiKey: undefined,
+      openrouterApiKeyPresent: true,
+      openrouterApiKeyHint: "sk-a...mnop",
+      replicateApiKeyPresent: false,
+      replicateApiKeyHint: null,
+      falApiKeyPresent: true,
+      falApiKeyHint: "fal-...cdef",
+      kieApiKeyPresent: false,
     });
     mockTauri.getDefaultSystemPrompts.mockResolvedValueOnce({
       canvasAgent: "default-canvas",
@@ -760,29 +751,29 @@ describe("getAdminSettings", () => {
   });
 });
 
-// ── putAdminSettings ──
+// ג”€ג”€ putAdminSettings ג”€ג”€
 
 describe("putAdminSettings", () => {
-  it("merges new settings with existing and calls updateAdminSettings", async () => {
-    mockTauri.getAdminSettings
-      .mockResolvedValueOnce({ openrouterApiKey: "old-key", adminEmails: ["a@b.com"] })
-      .mockResolvedValueOnce({ openrouterApiKey: "new-key", adminEmails: ["a@b.com"] });
+  it("sends a patch without reading existing secrets", async () => {
+    mockTauri.updateAdminSettings.mockResolvedValueOnce({
+      openrouterApiKeyPresent: true,
+      openrouterApiKeyHint: "new-...-key",
+      adminEmails: ["a@b.com"],
+    });
     mockTauri.getDefaultSystemPrompts.mockResolvedValue({ canvasAgent: "", promptEnhancer: "" });
 
     await client.putAdminSettings("http://localhost", {
       openrouterApiKey: "new-key",
     });
 
-    expect(mockTauri.updateAdminSettings).toHaveBeenCalledWith(
-      expect.objectContaining({
-        openrouterApiKey: "new-key",
-        adminEmails: ["a@b.com"],
-      })
-    );
+    expect(mockTauri.updateAdminSettings).toHaveBeenCalledWith({
+      openrouterApiKey: "new-key",
+    });
+    expect(mockTauri.getAdminSettings).not.toHaveBeenCalled();
   });
 });
 
-// ── createWorkflowFromModel ──
+// ג”€ג”€ createWorkflowFromModel ג”€ג”€
 
 describe("createWorkflowFromModel", () => {
   it("creates workflow from provider model detail", async () => {
@@ -812,7 +803,7 @@ describe("createWorkflowFromModel", () => {
   });
 });
 
-// ── getAssetVersions ──
+// ג”€ג”€ getAssetVersions ג”€ג”€
 
 describe("getAssetVersions", () => {
   it("passes correct arguments to tauri", async () => {
@@ -832,7 +823,7 @@ describe("getAssetVersions", () => {
   });
 });
 
-// ── pinWorkflow / unpinWorkflow ──
+// ג”€ג”€ pinWorkflow / unpinWorkflow ג”€ג”€
 
 describe("pinWorkflow", () => {
   it("delegates to tauri.pinWorkflow", async () => {
@@ -848,7 +839,7 @@ describe("unpinWorkflow", () => {
   });
 });
 
-// ── getCompareModels / getCompareGroups ──
+// ג”€ג”€ getCompareModels / getCompareGroups ג”€ג”€
 
 describe("getCompareModels", () => {
   it("delegates to tauri", async () => {
@@ -866,9 +857,9 @@ describe("getCompareGroups", () => {
   });
 });
 
-// ── tauriRecordToSummary — nullish coalescing branches ──
+// ג”€ג”€ tauriRecordToSummary ג€” nullish coalescing branches ג”€ג”€
 
-describe("tauriRecordToSummary via getWorkflows — nullish field branches", () => {
+describe("tauriRecordToSummary via getWorkflows ג€” nullish field branches", () => {
   it("handles meta fields explicitly null/undefined vs truthy", async () => {
     mockTauri.listWorkflows.mockResolvedValueOnce([
       {
@@ -995,7 +986,7 @@ describe("tauriRecordToSummary via getWorkflows — nullish field branches", () 
   });
 });
 
-describe("createGeneration — jobId nullish coalescing", () => {
+describe("createGeneration ג€” jobId nullish coalescing", () => {
   it("uses jobId when provided", async () => {
     mockTauri.createGeneration.mockResolvedValueOnce({ id: "gen-x", jobId: "real-job" });
     const result = await client.createGeneration("http://localhost", {
@@ -1021,7 +1012,7 @@ describe("createGeneration — jobId nullish coalescing", () => {
   });
 });
 
-describe("getGallery — nextCursor nullish coalescing", () => {
+describe("getGallery ג€” nextCursor nullish coalescing", () => {
   it("returns nextCursor when defined", async () => {
     mockTauri.listGallery.mockResolvedValueOnce({ items: [], nextCursor: "abc" });
     const result = await client.getGallery("http://localhost", {});
@@ -1035,7 +1026,7 @@ describe("getGallery — nextCursor nullish coalescing", () => {
   });
 });
 
-describe("getWorkflows — providerStatus null branch", () => {
+describe("getWorkflows ג€” providerStatus null branch", () => {
   it("does not set providerAvailable when providerStatus is null", async () => {
     mockTauri.listWorkflows.mockResolvedValueOnce([
       { id: "wf-1", engine: "comfyui", meta: {}, template: {} },
@@ -1047,7 +1038,7 @@ describe("getWorkflows — providerStatus null branch", () => {
   });
 });
 
-describe("getWorkflows — providerAvailable ?? false branches", () => {
+describe("getWorkflows ג€” providerAvailable ?? false branches", () => {
   it("defaults to false when provider field is missing from status", async () => {
     mockTauri.listWorkflows.mockResolvedValueOnce([
       { id: "wf-comfy", engine: "comfyui", meta: {}, template: {} },
@@ -1066,7 +1057,7 @@ describe("getWorkflows — providerAvailable ?? false branches", () => {
   });
 });
 
-describe("setActiveAssetVersion — gen null branch", () => {
+describe("setActiveAssetVersion ג€” gen null branch", () => {
   it("returns empty array when getGeneration returns null", async () => {
     mockTauri.getGeneration.mockResolvedValueOnce(null);
     const result = await client.setActiveAssetVersion("http://localhost", "gen-1", { assetId: "a1" });
@@ -1074,11 +1065,8 @@ describe("setActiveAssetVersion — gen null branch", () => {
   });
 });
 
-describe("putAdminSettings — individual field branches", () => {
+describe("putAdminSettings ג€” individual field branches", () => {
   it("merges all possible fields", async () => {
-    mockTauri.getAdminSettings
-      .mockResolvedValueOnce({ openrouterApiKey: "old" })
-      .mockResolvedValueOnce({});
     mockTauri.getDefaultSystemPrompts.mockResolvedValue({ canvasAgent: "", promptEnhancer: "" });
 
     await client.putAdminSettings("http://localhost", {
@@ -1114,10 +1102,7 @@ describe("putAdminSettings — individual field branches", () => {
     );
   });
 
-  it("handles null current settings from tauri", async () => {
-    mockTauri.getAdminSettings
-      .mockResolvedValueOnce(null)  // first call returns null → ?? {} fallback
-      .mockResolvedValueOnce({});
+  it("sends a secret patch without reading current settings", async () => {
     mockTauri.getDefaultSystemPrompts.mockResolvedValue({ canvasAgent: "", promptEnhancer: "" });
 
     await client.putAdminSettings("http://localhost", {
@@ -1131,27 +1116,20 @@ describe("putAdminSettings — individual field branches", () => {
     );
   });
 
-  it("does not overwrite fields that are not in the body", async () => {
-    mockTauri.getAdminSettings
-      .mockResolvedValueOnce({ openrouterApiKey: "keep-this", falApiKey: "keep-fal" })
-      .mockResolvedValueOnce({});
+  it("omits fields that are not in the patch", async () => {
     mockTauri.getDefaultSystemPrompts.mockResolvedValue({ canvasAgent: "", promptEnhancer: "" });
 
     await client.putAdminSettings("http://localhost", {
       replicateApiKey: "set-rep",
     });
 
-    expect(mockTauri.updateAdminSettings).toHaveBeenCalledWith(
-      expect.objectContaining({
-        openrouterApiKey: "keep-this",
-        falApiKey: "keep-fal",
-        replicateApiKey: "set-rep",
-      })
-    );
+    expect(mockTauri.updateAdminSettings).toHaveBeenCalledWith({
+      replicateApiKey: "set-rep",
+    });
   });
 });
 
-describe("getAdminSettings — null settings fallback", () => {
+describe("getAdminSettings ג€” null settings fallback", () => {
   it("handles null settings from tauri", async () => {
     mockTauri.getAdminSettings.mockResolvedValueOnce(null);
     mockTauri.getDefaultSystemPrompts.mockResolvedValueOnce({ canvasAgent: "def1", promptEnhancer: "def2" });
@@ -1163,7 +1141,7 @@ describe("getAdminSettings — null settings fallback", () => {
   });
 });
 
-describe("getAdminSettings — defaults null fallback", () => {
+describe("getAdminSettings ג€” defaults null fallback", () => {
   it("falls back to empty string when default prompts are null", async () => {
     mockTauri.getAdminSettings.mockResolvedValueOnce({});
     mockTauri.getDefaultSystemPrompts.mockResolvedValueOnce({
@@ -1176,7 +1154,7 @@ describe("getAdminSettings — defaults null fallback", () => {
   });
 });
 
-describe("getReplicateModelParameters — modelId without slash", () => {
+describe("getReplicateModelParameters ג€” modelId without slash", () => {
   it("handles modelId without slash (parts[1] is undefined)", async () => {
     mockTauri.getReplicateModelParameters.mockResolvedValueOnce({ parameters: [] });
     const result = await client.getReplicateModelParameters("http://localhost", "noSlash");
@@ -1184,7 +1162,7 @@ describe("getReplicateModelParameters — modelId without slash", () => {
   });
 });
 
-describe("getReplicateModelParameters — raw schema conversion", () => {
+describe("getReplicateModelParameters ג€” raw schema conversion", () => {
   it("converts schema when raw has no parameters field", async () => {
     mockTauri.getReplicateModelParameters.mockResolvedValueOnce({
       input: { type: "object", properties: {} },
@@ -1205,7 +1183,7 @@ describe("getReplicateModelParameters — raw schema conversion", () => {
   });
 });
 
-describe("getFalModelParameters — raw schema conversion", () => {
+describe("getFalModelParameters ג€” raw schema conversion", () => {
   it("converts schema when raw has no parameters field", async () => {
     mockTauri.getFalModelParameters.mockResolvedValueOnce({
       input: { type: "object", properties: {} },
@@ -1224,7 +1202,7 @@ describe("getFalModelParameters — raw schema conversion", () => {
   });
 });
 
-// ── getHealth ──
+// ג”€ג”€ getHealth ג”€ג”€
 
 describe("getHealth", () => {
   it("delegates to tauri.getHealth", async () => {
@@ -1240,7 +1218,7 @@ describe("getHealth", () => {
   });
 });
 
-// ── getCurrentUser ──
+// ג”€ג”€ getCurrentUser ג”€ג”€
 
 describe("getCurrentUser", () => {
   it("delegates to tauri.getCurrentUser", async () => {
@@ -1257,7 +1235,7 @@ describe("getCurrentUser", () => {
   });
 });
 
-// ── getProviderStatus ──
+// ג”€ג”€ getProviderStatus ג”€ג”€
 
 describe("getProviderStatus", () => {
   it("delegates to tauri.getProviderStatus", async () => {
@@ -1269,7 +1247,7 @@ describe("getProviderStatus", () => {
   });
 });
 
-// ── saveWorkflowOrganization ──
+// ג”€ג”€ saveWorkflowOrganization ג”€ג”€
 
 describe("saveWorkflowOrganization", () => {
   it("delegates to tauri.reorderWorkflowItems", async () => {
@@ -1279,7 +1257,7 @@ describe("saveWorkflowOrganization", () => {
   });
 });
 
-// ── createWorkflowFolder ──
+// ג”€ג”€ createWorkflowFolder ג”€ג”€
 
 describe("createWorkflowFolder", () => {
   it("delegates to tauri.createWorkflowFolder", async () => {
@@ -1291,7 +1269,7 @@ describe("createWorkflowFolder", () => {
   });
 });
 
-// ── renameWorkflowFolder ──
+// ג”€ג”€ renameWorkflowFolder ג”€ג”€
 
 describe("renameWorkflowFolder", () => {
   it("delegates to tauri.renameWorkflowFolder", async () => {
@@ -1300,7 +1278,7 @@ describe("renameWorkflowFolder", () => {
   });
 });
 
-// ── deleteWorkflowFolder ──
+// ג”€ג”€ deleteWorkflowFolder ג”€ג”€
 
 describe("deleteWorkflowFolder", () => {
   it("delegates to tauri.deleteWorkflowFolder", async () => {
@@ -1309,7 +1287,7 @@ describe("deleteWorkflowFolder", () => {
   });
 });
 
-// ── deleteGeneration ──
+// ג”€ג”€ deleteGeneration ג”€ג”€
 
 describe("deleteGeneration", () => {
   it("delegates to tauri.deleteGeneration", async () => {
@@ -1318,7 +1296,7 @@ describe("deleteGeneration", () => {
   });
 });
 
-// ── getAssetTypes ──
+// ג”€ג”€ getAssetTypes ג”€ג”€
 
 describe("getAssetTypes", () => {
   it("delegates to tauri.listAssetTypes", async () => {
@@ -1336,7 +1314,7 @@ describe("getAssetTypes", () => {
   });
 });
 
-// ── getPresets ──
+// ג”€ג”€ getPresets ג”€ג”€
 
 describe("getPresets", () => {
   it("normalizes camelCase backend fields to UserPreset shape", async () => {
@@ -1359,7 +1337,7 @@ describe("getPresets", () => {
   });
 });
 
-// ── streamEnhancedPrompt ──
+// ג”€ג”€ streamEnhancedPrompt ג”€ג”€
 
 describe("streamEnhancedPrompt", () => {
   it("delegates to tauri.streamEnhancedPrompt with prompt and callback", async () => {
@@ -1376,7 +1354,7 @@ describe("streamEnhancedPrompt", () => {
   });
 });
 
-// ── getProviderModelDetail ──
+// ג”€ג”€ getProviderModelDetail ג”€ג”€
 
 describe("getProviderModelDetail", () => {
   it("delegates to tauri.getProviderModelDetail", async () => {
@@ -1388,7 +1366,7 @@ describe("getProviderModelDetail", () => {
   });
 });
 
-// ── getReplicateModelParameters ──
+// ג”€ג”€ getReplicateModelParameters ג”€ג”€
 
 describe("getReplicateModelParameters", () => {
   it("returns raw result when it has parameters field", async () => {
@@ -1412,7 +1390,7 @@ describe("getReplicateModelParameters", () => {
   });
 });
 
-// ── getFalModelParameters ──
+// ג”€ג”€ getFalModelParameters ג”€ג”€
 
 describe("getFalModelParameters", () => {
   it("returns raw result when it has parameters field", async () => {
@@ -1424,7 +1402,7 @@ describe("getFalModelParameters", () => {
   });
 });
 
-// ── getWorkflows additional edge cases ──
+// ג”€ג”€ getWorkflows additional edge cases ג”€ג”€
 
 describe("getWorkflows edge cases", () => {
   it("sets engine to kie for kie workflows", async () => {
@@ -1623,32 +1601,27 @@ describe("getWorkflows edge cases", () => {
   });
 });
 
-// ── putAdminSettings edge cases ──
+// ג”€ג”€ putAdminSettings edge cases ג”€ג”€
 
 describe("putAdminSettings edge cases", () => {
-  it("merges multiple fields correctly", async () => {
-    mockTauri.getAdminSettings
-      .mockResolvedValueOnce({ openrouterApiKey: "old", comfyBaseUrls: ["http://a"] })
-      .mockResolvedValueOnce({ openrouterApiKey: "old", falApiKey: "new-fal", comfyBaseUrls: ["http://a"] });
+  it("patches one field without returning other secrets", async () => {
+    mockTauri.updateAdminSettings.mockResolvedValueOnce({
+      falApiKeyPresent: true,
+      falApiKeyHint: "new-...-fal",
+      comfyBaseUrls: ["http://a"],
+    });
     mockTauri.getDefaultSystemPrompts.mockResolvedValue({ canvasAgent: "", promptEnhancer: "" });
 
     await client.putAdminSettings("http://localhost", {
       falApiKey: "new-fal",
     });
 
-    expect(mockTauri.updateAdminSettings).toHaveBeenCalledWith(
-      expect.objectContaining({
-        openrouterApiKey: "old",
-        falApiKey: "new-fal",
-        comfyBaseUrls: ["http://a"],
-      })
-    );
+    expect(mockTauri.updateAdminSettings).toHaveBeenCalledWith({
+      falApiKey: "new-fal",
+    });
   });
 
   it("handles null values to clear settings", async () => {
-    mockTauri.getAdminSettings
-      .mockResolvedValueOnce({ openrouterApiKey: "old-key" })
-      .mockResolvedValueOnce({ openrouterApiKey: null });
     mockTauri.getDefaultSystemPrompts.mockResolvedValue({ canvasAgent: "", promptEnhancer: "" });
 
     await client.putAdminSettings("http://localhost", {
@@ -1663,9 +1636,10 @@ describe("putAdminSettings edge cases", () => {
   });
 
   it("updates canvas agent settings", async () => {
-    mockTauri.getAdminSettings
-      .mockResolvedValueOnce({})
-      .mockResolvedValueOnce({ canvasAgentModel: "custom/model", canvasAgentTemperature: 0.5 });
+    mockTauri.updateAdminSettings.mockResolvedValueOnce({
+      canvasAgentModel: "custom/model",
+      canvasAgentTemperature: 0.5,
+    });
     mockTauri.getDefaultSystemPrompts.mockResolvedValue({ canvasAgent: "", promptEnhancer: "" });
 
     const result = await client.putAdminSettings("http://localhost", {
@@ -1683,9 +1657,6 @@ describe("putAdminSettings edge cases", () => {
   });
 
   it("updates prompt enhancer settings", async () => {
-    mockTauri.getAdminSettings
-      .mockResolvedValueOnce({})
-      .mockResolvedValueOnce({ promptEnhancerModel: "custom/enhancer", promptEnhancerSystemPrompt: "Be creative" });
     mockTauri.getDefaultSystemPrompts.mockResolvedValue({ canvasAgent: "", promptEnhancer: "" });
 
     await client.putAdminSettings("http://localhost", {
@@ -1702,23 +1673,9 @@ describe("putAdminSettings edge cases", () => {
   });
 });
 
-// ── removeBackground edge cases ──
+// ג”€ג”€ removeBackground edge cases ג”€ג”€
 
-describe("removeBackground edge cases", () => {
-  it("includes asset type from returned asset", async () => {
-    mockTauri.removeBackground.mockResolvedValueOnce({ id: "a3", url: "/bg.png", type: "custom_type" });
-    const result = await client.removeBackground("http://localhost", "gen-2", { itemIndex: 0 });
-    expect(result.asset.type).toBe("custom_type");
-  });
-
-  it("defaults asset type to rembg when not in returned asset", async () => {
-    mockTauri.removeBackground.mockResolvedValueOnce({ id: "a4", url: "/bg2.png" });
-    const result = await client.removeBackground("http://localhost", "gen-3", { itemIndex: 1 });
-    expect(result.asset.type).toBe("rembg");
-  });
-});
-
-// ── createWorkflowFromModel additional cases ──
+// ג”€ג”€ createWorkflowFromModel additional cases ג”€ג”€
 
 describe("createWorkflowFromModel edge cases", () => {
   it("uses title as fallback when name is missing", async () => {
@@ -1749,7 +1706,7 @@ describe("createWorkflowFromModel edge cases", () => {
   });
 });
 
-// ── getReplicateModelParameters — schema conversion branch ──
+// ג”€ג”€ getReplicateModelParameters ג€” schema conversion branch ג”€ג”€
 
 describe("getReplicateModelParameters schema conversion", () => {
   it("converts schema to parameters when raw has no parameters field", async () => {
@@ -1794,7 +1751,7 @@ describe("getReplicateModelParameters schema conversion", () => {
   });
 });
 
-// ── getFalModelParameters — schema conversion branch ──
+// ג”€ג”€ getFalModelParameters ג€” schema conversion branch ג”€ג”€
 
 describe("getFalModelParameters schema conversion", () => {
   it("converts schema to parameters when raw has no parameters field", async () => {
@@ -1834,7 +1791,7 @@ describe("getFalModelParameters schema conversion", () => {
   });
 });
 
-// ── streamCanvasChat ──
+// ג”€ג”€ streamCanvasChat ג”€ג”€
 
 describe("streamCanvasChat", () => {
   it("returns a Response with SSE content type", async () => {
@@ -1866,7 +1823,7 @@ describe("streamCanvasChat", () => {
   });
 });
 
-// ── listCanvasesAsync (through getMyGenerations re-verification) ──
+// ג”€ג”€ listCanvasesAsync (through getMyGenerations re-verification) ג”€ג”€
 
 describe("getGallery edge cases", () => {
   it("returns items from tauri result", async () => {
@@ -1895,7 +1852,7 @@ describe("getGallery edge cases", () => {
   });
 });
 
-// ── streamCanvasChat ──
+// ג”€ג”€ streamCanvasChat ג”€ג”€
 
 describe("streamCanvasChat", () => {
   let capturedListener: ((event: any) => void) | null;

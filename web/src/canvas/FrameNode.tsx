@@ -138,7 +138,7 @@ export const FrameNode = memo(function FrameNode({
         y={(TITLE_BAR_HEIGHT - TITLE_FONT_SIZE) / 2 - 1}
         text={node.collapsed ? "▸" : "▾"}
         fontSize={TITLE_FONT_SIZE}
-        fontFamily="Azeret Mono"
+        fontFamily="Azeret Mono Variable"
         fontStyle="bold"
         fill={titleColor}
         onClick={(e) => {
@@ -154,7 +154,7 @@ export const FrameNode = memo(function FrameNode({
         width={node.width - TITLE_PADDING * 2 - 14}
         text={title}
         fontSize={TITLE_FONT_SIZE}
-        fontFamily="Azeret Mono"
+        fontFamily="Azeret Mono Variable"
         fontStyle="bold"
         fill={titleColor}
         ellipsis={true}

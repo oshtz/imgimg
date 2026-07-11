@@ -4,7 +4,7 @@ import { listEnhancerPresets, setActiveEnhancerPreset, type EnhancerPreset } fro
 import type { Model, SavedPrompt } from "../types";
 import type { WorkflowParameter, UserPreset, ApiBaseUrl, DiscoveredModel } from "../api";
 import type { AspectRatio } from "../workflows";
-import type { PromptPosition } from "./SettingsPanel";
+import type { PromptPosition } from "./preferences";
 import { ProviderModelPicker } from "./ReplicateModelPicker";
 import { copyToClipboard } from "../utils/clipboard";
 import { clampBatchSize } from "../utils/clamp";
@@ -97,12 +97,16 @@ export function PromptCenterpiece(props: {
   onDynamicModelSelect?: (modelId: string, model: DiscoveredModel) => void;
   onDynamicModelClear?: () => void;
   dynamicModelReadme?: string | null;
+  dynamicModelLoading?: boolean;
+  dynamicModelError?: string | null;
+  onRetryDynamicModel?: () => void;
   pinnedDynamicModels?: DiscoveredModel[];
   onPinDynamicModel?: (model: DiscoveredModel) => void;
   onUnpinDynamicModel?: (modelId: string) => void;
   providerAvailable?: boolean;
   engine?: string;
-  onOpenSettings?: () => void;
+  onOpenPromptSettings?: () => void;
+  onOpenApiKeys?: () => void;
   promptPosition?: PromptPosition;
 }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
@@ -1599,7 +1603,7 @@ export function PromptCenterpiece(props: {
                           className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
                           onClick={() => {
                             setEnhancerDropdownOpen(false);
-                            props.onOpenSettings?.();
+                            props.onOpenPromptSettings?.();
                           }}
                         >
                           <TbSettings className="h-3.5 w-3.5" />
@@ -1646,6 +1650,10 @@ export function PromptCenterpiece(props: {
               >
               {isEnhancing
                 ? "Enhancing…"
+                : props.dynamicModelLoading
+                  ? "Loading model…"
+                : props.dynamicModelError
+                  ? "Model unavailable"
                 : !props.workflowSelected
                 ? "Select workflow"
                 : props.supportsPresets && !hasRequiredPreset
@@ -1661,16 +1669,27 @@ export function PromptCenterpiece(props: {
             </div>
           </div>
 
+          {props.dynamicModelError && (
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 dark:border-red-900 dark:bg-red-950/40">
+              <span className="text-xs text-red-800 dark:text-red-200">{props.dynamicModelError}</span>
+              {props.onRetryDynamicModel && (
+                <button type="button" onClick={props.onRetryDynamicModel} className="shrink-0 text-xs font-medium text-red-700 hover:underline dark:text-red-300">
+                  Retry
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Missing API key banner */}
           {props.providerAvailable === false && props.engine && (
             <div className="mt-3 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900 dark:bg-amber-950/40">
               <span className="text-xs text-amber-800 dark:text-amber-200">
                 This workflow needs a {props.engine === "replicate" ? "Replicate" : props.engine === "fal" ? "FAL" : props.engine === "openrouter" ? "OpenRouter" : props.engine} API key.
               </span>
-              {props.onOpenSettings && (
+              {props.onOpenApiKeys && (
                 <button
                   type="button"
-                  onClick={props.onOpenSettings}
+                  onClick={props.onOpenApiKeys}
                   className="rounded px-2 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/50"
                 >
                   Add API Key

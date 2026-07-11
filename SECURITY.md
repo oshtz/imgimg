@@ -6,10 +6,10 @@ Please report security issues privately before opening a public issue. If the Gi
 
 ## Local API Key Storage
 
-Provider API keys are saved in imgimg's per-user SQLite database so the desktop app can run without a separate backend. Keys are masked in the UI, but they are not stored in an OS keychain or encrypted at rest yet.
+Provider API keys are stored in the native OS credential vault: Windows Credential Manager or macOS Keychain. The SQLite database stores settings and masked credential hints, not plaintext provider keys.
 
-Treat the app data directory, copied databases, backups, and logs as sensitive. Do not attach them to public issues unless you have removed secrets first.
+Existing plaintext credentials from older versions are migrated to the credential vault and removed from SQLite on first launch. Treat copied databases, backups, exported assets, and logs as private user data and review them before attaching anything to a public issue.
 
 ## Supported Versions
 
-Security fixes are currently made on the `main` branch until the project publishes a versioned support policy.
+Security fixes are provided for the latest published version and on the `main` branch.

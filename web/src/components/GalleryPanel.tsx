@@ -16,7 +16,6 @@ type GalleryPanelProps = {
   selectedGenerationId: string | null;
   assetUrl: (apiBaseUrl: ApiBaseUrl, asset: Asset) => string;
   onOpenAsset: (g: Generation, asset: Asset) => void;
-  authToken?: string | null;
   eventsEnabled?: boolean;
 };
 
@@ -139,6 +138,9 @@ function FilterDropdown({ value, onChange, options, allLabel, placeholder }: Fil
       <button
         type="button"
         onClick={toggle}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={allLabel}
         className={[
           "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm whitespace-nowrap",
           "bg-white dark:bg-black",
@@ -164,6 +166,7 @@ function FilterDropdown({ value, onChange, options, allLabel, placeholder }: Fil
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder={placeholder}
+                  aria-label={placeholder.replace("...", "")}
                   className="w-full rounded-md border border-zinc-200 bg-zinc-50 py-1.5 pl-8 pr-3 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500"
                 />
               </div>
@@ -458,9 +461,7 @@ export function GalleryPanel(props: GalleryPanelProps) {
   ]);
 
   useGenerationEvents({
-    apiBaseUrl: props.apiBaseUrl,
     generationId: null,
-    authToken: props.authToken ?? undefined,
     enabled: props.eventsEnabled,
     onEvent: (event) => {
       if (event.type === "generation") {
@@ -476,9 +477,6 @@ export function GalleryPanel(props: GalleryPanelProps) {
           return next;
         });
         return;
-      }
-      if (event.type === "generation_deleted") {
-        props.onItemsChange((prev) => prev.filter((g) => g.id !== event.data.generationId));
       }
     }
   });
@@ -563,6 +561,7 @@ export function GalleryPanel(props: GalleryPanelProps) {
             <input
               type="text"
               placeholder="Search prompt..."
+              aria-label="Search gallery prompts"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className={searchClasses}
@@ -628,13 +627,13 @@ export function GalleryPanel(props: GalleryPanelProps) {
           </div>
         )}
 
-        <div className="text-xs text-zinc-500 dark:text-zinc-400">
+        <div className="text-xs text-zinc-500 dark:text-zinc-400" role="status" aria-live="polite">
           {loading ? "Loading..." : `Showing ${galleryAssets.length} result${galleryAssets.length === 1 ? "" : "s"}`}
         </div>
       </div>
 
       {error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
           {error}
         </div>
       ) : null}
@@ -674,6 +673,7 @@ export function GalleryPanel(props: GalleryPanelProps) {
         <div className="flex items-center gap-3">
           <span className="text-xs text-zinc-500 dark:text-zinc-400">{pageLabel}</span>
           <select
+            aria-label="Results per page"
             value={pageSize}
             onChange={(e) => setPageSize(Number(e.target.value))}
             className="rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-600 dark:border-zinc-800 dark:bg-black dark:text-zinc-400"

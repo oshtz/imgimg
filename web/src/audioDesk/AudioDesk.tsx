@@ -23,6 +23,7 @@ import { createGeneration, type ApiBaseUrl, type DiscoveredModel, type WorkflowS
 import type { Asset, Generation } from "../types";
 import { ProviderModelPicker } from "../components/ReplicateModelPicker";
 import { usePersistedState, usePersistedString } from "../hooks/usePersistedState";
+import { useDurableWorkspaceState } from "../hooks/useDurableWorkspaceState";
 import { cn } from "../utils/cn";
 import { extractError } from "../utils/extractError";
 import {
@@ -520,7 +521,7 @@ export function AudioDesk(props: AudioDeskProps) {
     "imgimg.audioDesk.pinnedModels.v1",
     {},
   );
-  const [audioMeta, setAudioMeta] = usePersistedState<AudioMetaByGeneration>("imgimg.audioDesk.meta.v1", {});
+  const [audioMeta, setAudioMeta] = useDurableWorkspaceState<AudioMetaByGeneration>("audio_metadata", "imgimg.audioDesk.meta.v1", {});
   const [tagDraft, setTagDraft] = useState("");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);

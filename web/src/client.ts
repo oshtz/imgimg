@@ -270,6 +270,20 @@ export async function deleteGeneration(_apiBaseUrl: ApiBaseUrl, generationId: st
   return tauri.deleteGeneration(generationId);
 }
 
+export async function cancelGeneration(_apiBaseUrl: ApiBaseUrl, generationId: string) {
+  return tauri.cancelGeneration(generationId);
+}
+
+export async function retryGeneration(_apiBaseUrl: ApiBaseUrl, generationId: string) {
+  const generation = await tauri.retryGeneration(generationId);
+  return {
+    generation,
+    generationId: generation.id,
+    jobId: generation.jobId ?? "",
+    queuePosition: null as number | null,
+  };
+}
+
 export async function getAssetTypes(_apiBaseUrl: ApiBaseUrl) {
   return tauri.listAssetTypes();
 }
@@ -294,10 +308,10 @@ export async function regenerateItem(
   _apiBaseUrl: ApiBaseUrl,
   generationId: string,
   body: { itemIndex?: number; assetType?: string; seed?: number; promptPrefix?: string }
-) {
-  const asset = await tauri.regenerateItem(generationId, body.itemIndex, body.assetType, body.seed);
+): Promise<{ generationId: string; jobId: string; queuePosition: number; assets?: Asset[] }> {
+  const operation = await tauri.regenerateItem(generationId, body.itemIndex, body.assetType, body.seed);
   // Tauri regen runs synchronously — already complete when we reach here
-  return { generationId, jobId: "", queuePosition: 0 as number | null, assets: [asset] };
+  return { ...operation, assets: undefined };
 }
 
 export async function createInpaintAssetVersion(
@@ -312,7 +326,7 @@ export async function createInpaintAssetVersion(
     maskDataUrl: string;
   }
 ) {
-  await tauri.createInpaint(
+  return tauri.createInpaint(
     generationId,
     body.assetType,
     body.itemIndex,
@@ -322,7 +336,6 @@ export async function createInpaintAssetVersion(
     body.maskDataUrl,
   );
   // Tauri inpaint runs synchronously — already complete when we reach here
-  return { generationId, jobId: "", queuePosition: 0 as number | null };
 }
 
 export async function createOutpaintGeneration(
@@ -366,21 +379,23 @@ export async function removeBackground(
   generationId: string,
   body: { itemIndex: number }
 ) {
-  const asset = await tauri.removeBackground(generationId, body.itemIndex, {});
+  const operation = await tauri.removeBackground(generationId, body.itemIndex, {});
   return {
-    jobId: "",
+    jobId: operation.jobId,
     generationId,
     itemIndex: body.itemIndex,
-    queuePosition: null as number | null,
-    asset: { id: asset.id, url: asset.url, type: (asset as any).type ?? "rembg", itemIndex: body.itemIndex },
+    queuePosition: operation.queuePosition,
     alreadyExists: false,
   };
 }
 
 export async function downloadGenerationAssetsZip(_apiBaseUrl: ApiBaseUrl, generationId: string) {
-  const bytes = await tauri.downloadGenerationAssetsZip(generationId);
-  const blob = new Blob([new Uint8Array(bytes)], { type: "application/zip" });
-  return { blob, filename: `generation_${generationId}.zip` };
+  const { save } = await import("@tauri-apps/plugin-dialog");
+  const filename = `generation_${generationId}.zip`;
+  const destination = await save({ defaultPath: filename, filters: [{ name: "ZIP archive", extensions: ["zip"] }] });
+  if (!destination) return { saved: false, filename };
+  await tauri.exportGenerationAssetsZip(generationId, destination);
+  return { saved: true, filename };
 }
 
 // ──────────── Prompts ────────────
@@ -638,17 +653,23 @@ export async function getAdminSettings(_apiBaseUrl: ApiBaseUrl) {
     tauri.getAdminSettings(),
     tauri.getDefaultSystemPrompts(),
   ]);
-  const mask = (v: string | null | undefined) => v ? `${v.slice(0, 4)}...${v.slice(-4)}` : null;
+  return formatAdminSettings(settings, defaults);
+}
+
+function formatAdminSettings(
+  settings: Awaited<ReturnType<typeof tauri.getAdminSettings>> | null,
+  defaults: Record<string, string>,
+) {
   const s = settings ?? {} as any;
   return {
-    openrouterApiKeyPresent: Boolean(s.openrouterApiKey),
-    openrouterApiKeyHint: mask(s.openrouterApiKey),
-    replicateApiKeyPresent: Boolean(s.replicateApiKey),
-    replicateApiKeyHint: mask(s.replicateApiKey),
-    falApiKeyPresent: Boolean(s.falApiKey),
-    falApiKeyHint: mask(s.falApiKey),
-    kieApiKeyPresent: Boolean(s.kieApiKey),
-    kieApiKeyHint: mask(s.kieApiKey),
+    openrouterApiKeyPresent: Boolean(s.openrouterApiKeyPresent),
+    openrouterApiKeyHint: s.openrouterApiKeyHint ?? null,
+    replicateApiKeyPresent: Boolean(s.replicateApiKeyPresent),
+    replicateApiKeyHint: s.replicateApiKeyHint ?? null,
+    falApiKeyPresent: Boolean(s.falApiKeyPresent),
+    falApiKeyHint: s.falApiKeyHint ?? null,
+    kieApiKeyPresent: Boolean(s.kieApiKeyPresent),
+    kieApiKeyHint: s.kieApiKeyHint ?? null,
     adminEmails: s.adminEmails ?? [],
     allowedEmailDomains: s.allowedEmailDomains ?? [],
     comfyBaseUrls: s.comfyBaseUrls ?? [],
@@ -672,7 +693,7 @@ export async function getAdminSettings(_apiBaseUrl: ApiBaseUrl) {
 }
 
 export async function putAdminSettings(
-  apiBaseUrl: ApiBaseUrl,
+  _apiBaseUrl: ApiBaseUrl,
   body: {
     openrouterApiKey?: string | null;
     replicateApiKey?: string | null;
@@ -691,30 +712,15 @@ export async function putAdminSettings(
     rembgWorkflowId?: string | null;
   }
 ) {
-  const current = await tauri.getAdminSettings() ?? {};
-  const merged = { ...current };
-  if (body.openrouterApiKey !== undefined) merged.openrouterApiKey = body.openrouterApiKey;
-  if (body.replicateApiKey !== undefined) merged.replicateApiKey = body.replicateApiKey;
-  if (body.falApiKey !== undefined) merged.falApiKey = body.falApiKey;
-  if (body.kieApiKey !== undefined) merged.kieApiKey = body.kieApiKey;
-  if (body.adminEmails !== undefined) merged.adminEmails = body.adminEmails;
-  if (body.allowedEmailDomains !== undefined) merged.allowedEmailDomains = body.allowedEmailDomains;
-  if (body.comfyBaseUrls !== undefined) merged.comfyBaseUrls = body.comfyBaseUrls;
-  if (body.canvasAgentModel !== undefined) merged.canvasAgentModel = body.canvasAgentModel;
-  if (body.canvasAgentSystemPrompt !== undefined) merged.canvasAgentSystemPrompt = body.canvasAgentSystemPrompt;
-  if (body.canvasAgentTemperature !== undefined) merged.canvasAgentTemperature = body.canvasAgentTemperature;
-  if (body.promptEnhancerModel !== undefined) merged.promptEnhancerModel = body.promptEnhancerModel;
-  if (body.promptEnhancerSystemPrompt !== undefined) merged.promptEnhancerSystemPrompt = body.promptEnhancerSystemPrompt;
-  if (body.inpaintWorkflowId !== undefined) merged.inpaintWorkflowId = body.inpaintWorkflowId;
-  if (body.outpaintWorkflowId !== undefined) merged.outpaintWorkflowId = body.outpaintWorkflowId;
-  if (body.rembgWorkflowId !== undefined) merged.rembgWorkflowId = body.rembgWorkflowId;
-  await tauri.updateAdminSettings(merged);
-  return getAdminSettings(apiBaseUrl);
+  const [settings, defaults] = await Promise.all([
+    tauri.updateAdminSettings(body),
+    tauri.getDefaultSystemPrompts(),
+  ]);
+  return formatAdminSettings(settings, defaults);
 }
 
 // ──────────── Re-export utilities and types ────────────
 
-export { buildAuthHeaders, getSessionId } from "./api";
 export type {
   ApiBaseUrl,
   WorkflowSummary,

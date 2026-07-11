@@ -48,7 +48,25 @@ impl OpenRouterProxy {
     }
 
     pub async fn check_health(&self) -> bool {
-        self.get_api_key().await.is_ok()
+        let Ok(key) = self.get_api_key().await else {
+            return false;
+        };
+        let Ok(headers) = bearer_headers(&key) else {
+            return false;
+        };
+        let url = format!(
+            "{}/key",
+            self.config.openrouter_base_url.trim_end_matches('/')
+        );
+        matches!(
+            self.http_client
+                .get(url)
+                .headers(headers)
+                .timeout(Duration::from_secs(5))
+                .send()
+                .await,
+            Ok(response) if response.status().is_success()
+        )
     }
 
     /// Generate images via OpenRouter's chat completions endpoint.
@@ -317,8 +335,7 @@ impl OpenRouterProxy {
                 let line = buffer[..newline_pos].trim().to_string();
                 buffer = buffer[newline_pos + 1..].to_string();
 
-                if line.starts_with("data: ") {
-                    let data_str = &line[6..];
+                if let Some(data_str) = line.strip_prefix("data: ") {
                     if data_str == "[DONE]" {
                         continue;
                     }

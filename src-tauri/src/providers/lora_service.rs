@@ -39,7 +39,11 @@ impl LoraService {
         {
             let cache = self.cache.lock().await;
             if let Some((ref loras, ref when, was_success)) = *cache {
-                let ttl = if was_success { CACHE_TTL_MS } else { FAILURE_CACHE_TTL_MS };
+                let ttl = if was_success {
+                    CACHE_TTL_MS
+                } else {
+                    FAILURE_CACHE_TTL_MS
+                };
                 if when.elapsed().as_millis() < ttl as u128 {
                     return Ok(loras.clone());
                 }
@@ -90,7 +94,9 @@ impl LoraService {
                     .cloned()
                     .unwrap_or_else(|| {
                         // Strip extension for display name
-                        name.rsplit_once('.').map(|(n, _)| n.to_string()).unwrap_or_else(|| name.clone())
+                        name.rsplit_once('.')
+                            .map(|(n, _)| n.to_string())
+                            .unwrap_or_else(|| name.clone())
                     });
 
                 let preview_url = preview_urls.and_then(|pu| pu.get(name)).cloned();
@@ -103,5 +109,11 @@ impl LoraService {
                 }
             })
             .collect()
+    }
+}
+
+impl Default for LoraService {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -419,7 +419,7 @@ describe("useWorkflowManager", () => {
     });
   });
 
-  it("refreshWorkflows resets state on error", async () => {
+  it("refreshWorkflows preserves the last good state on error", async () => {
     // First load succeeds
     mockGetWorkflows.mockResolvedValueOnce({
       workflows: [{ id: "wf-1", name: "WF" }],
@@ -441,9 +441,10 @@ describe("useWorkflowManager", () => {
       await result.current.refreshWorkflows();
     });
 
-    expect(result.current.workflowsRemote).toEqual([]);
-    expect(result.current.pinnedWorkflowIds).toEqual([]);
-    expect(result.current.workflowOrg).toBeNull();
+    expect(result.current.workflowsRemote).toEqual([{ id: "wf-1", name: "WF" }]);
+    expect(result.current.pinnedWorkflowIds).toEqual(["wf-1"]);
+    expect(result.current.workflowOrg).toEqual({ folders: [], items: [] });
+    expect(result.current.workflowError).toBe("Network error");
   });
 
   it("refreshWorkflowPreviews handles errors silently", async () => {

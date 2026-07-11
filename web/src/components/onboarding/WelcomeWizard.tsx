@@ -1,7 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { TbCheck, TbX, TbExternalLink } from "react-icons/tb";
 import * as tauri from "../../tauri-api";
-import { loadBundledWorkflows, setOnboardingCompleted } from "../../lib/onboarding";
+import { setOnboardingCompleted } from "../../lib/onboarding";
 
 interface ProviderConfig {
   id: string;
@@ -10,7 +10,6 @@ interface ProviderConfig {
   keyPlaceholder: string;
   signupUrl: string;
   signupLabel: string;
-  setKey: (value: string | null) => Promise<unknown>;
   recommended?: boolean;
 }
 
@@ -22,7 +21,6 @@ const PROVIDERS: ProviderConfig[] = [
     keyPlaceholder: "r8_...",
     signupUrl: "https://replicate.com/account/api-tokens",
     signupLabel: "replicate.com",
-    setKey: tauri.setReplicateApiKey,
     recommended: true,
   },
   {
@@ -32,7 +30,6 @@ const PROVIDERS: ProviderConfig[] = [
     keyPlaceholder: "fal_...",
     signupUrl: "https://fal.ai/dashboard/keys",
     signupLabel: "fal.ai",
-    setKey: tauri.setFalApiKey,
   },
   {
     id: "openrouter",
@@ -41,7 +38,6 @@ const PROVIDERS: ProviderConfig[] = [
     keyPlaceholder: "sk-or-...",
     signupUrl: "https://openrouter.ai/keys",
     signupLabel: "openrouter.ai",
-    setKey: tauri.setOpenrouterApiKey,
   },
 ];
 
@@ -49,13 +45,14 @@ type Step = "welcome" | "providers" | "done";
 
 interface ProviderState {
   key: string;
-  status: "idle" | "validating" | "valid" | "invalid";
+  status: "idle" | "validating" | "verified" | "configured" | "invalid" | "unreachable";
   expanded: boolean;
 }
 
 export function WelcomeWizard(props: {
   onComplete: () => void;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState<Step>("welcome");
   const [providerStates, setProviderStates] = useState<Record<string, ProviderState>>(() => {
     const initial: Record<string, ProviderState> = {};
@@ -67,13 +64,12 @@ export function WelcomeWizard(props: {
   const [saving, setSaving] = useState(false);
 
   const configuredProviders = PROVIDERS.filter(
-    (p) => providerStates[p.id]?.status === "valid"
+    (p) => ["verified", "configured"].includes(providerStates[p.id]?.status)
   );
 
   const handleSkip = useCallback(async () => {
     setSaving(true);
     try {
-      await loadBundledWorkflows();
       setOnboardingCompleted();
       props.onComplete();
     } finally {
@@ -98,15 +94,16 @@ export function WelcomeWizard(props: {
     }));
 
     try {
-      await provider.setKey(state.key);
-      // Check health after setting key
-      const status = await tauri.getProviderStatus();
-      const providerStatus = (status as any)?.[provider.id];
-      const isValid = providerStatus?.available === true || providerStatus?.hasApiKey === true;
+      const result = await tauri.verifyProviderCredential(provider.id, state.key);
+      const nextStatus = result.state === "verified"
+        ? "verified"
+        : result.state === "configured_unverified"
+          ? "configured"
+          : result.state;
 
       setProviderStates((prev) => ({
         ...prev,
-        [provider.id]: { ...prev[provider.id], status: isValid ? "valid" : "invalid" },
+        [provider.id]: { ...prev[provider.id], status: nextStatus },
       }));
     } catch {
       setProviderStates((prev) => ({
@@ -126,7 +123,6 @@ export function WelcomeWizard(props: {
   const handleContinue = useCallback(async () => {
     setSaving(true);
     try {
-      await loadBundledWorkflows();
       setOnboardingCompleted();
       setStep("done");
     } finally {
@@ -138,9 +134,31 @@ export function WelcomeWizard(props: {
     props.onComplete();
   }, [props]);
 
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    dialog.querySelector<HTMLElement>("button, input, a[href]")?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), a[href]"));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    dialog.addEventListener("keydown", handleKeyDown);
+    return () => dialog.removeEventListener("keydown", handleKeyDown);
+  }, [step]);
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="relative mx-4 w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-8 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="onboarding-title" className="relative mx-4 w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-8 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
         {step === "welcome" && (
           <WelcomeStep
             onGetStarted={() => setStep("providers")}
@@ -178,7 +196,7 @@ function WelcomeStep(props: {
 }) {
   return (
     <div className="flex flex-col items-center gap-6 text-center">
-      <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+      <h1 id="onboarding-title" className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
         Welcome to imgimg
       </h1>
       <p className="max-w-sm text-sm text-zinc-500 dark:text-zinc-400">
@@ -218,7 +236,7 @@ function ProvidersStep(props: {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+        <h2 id="onboarding-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
           Connect your providers
         </h2>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
@@ -284,14 +302,24 @@ function ProviderCard(props: {
                 recommended
               </span>
             )}
-            {state.status === "valid" && (
+            {state.status === "verified" && (
               <span className="flex items-center gap-1 text-[10px] font-medium text-green-600 dark:text-green-400">
-                <TbCheck className="h-3 w-3" /> Ready
+                <TbCheck className="h-3 w-3" /> Verified
+              </span>
+            )}
+            {state.status === "configured" && (
+              <span className="flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                <TbCheck className="h-3 w-3" /> Saved, unverified
               </span>
             )}
             {state.status === "invalid" && (
               <span className="flex items-center gap-1 text-[10px] font-medium text-red-500">
                 <TbX className="h-3 w-3" /> Invalid
+              </span>
+            )}
+            {state.status === "unreachable" && (
+              <span className="flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                <TbX className="h-3 w-3" /> Unreachable
               </span>
             )}
           </div>
@@ -308,6 +336,8 @@ function ProviderCard(props: {
         <div className="border-t border-zinc-100 px-4 py-3 dark:border-zinc-800">
           <div className="flex gap-2">
             <input
+              id={`provider-key-${provider.id}`}
+              aria-label={`${provider.label} API key`}
               type="password"
               value={state.key}
               onChange={(e) => props.onKeyChange(e.target.value)}
@@ -356,7 +386,7 @@ function DoneStep(props: {
 
   return (
     <div className="flex flex-col items-center gap-6 text-center">
-      <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+      <h2 id="onboarding-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
         You're ready to create
       </h2>
 

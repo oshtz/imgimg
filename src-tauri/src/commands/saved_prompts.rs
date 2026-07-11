@@ -18,9 +18,6 @@ pub async fn upsert_saved_prompt(
 }
 
 #[tauri::command]
-pub async fn delete_saved_prompt(
-    state: State<'_, AppState>,
-    id: String,
-) -> AppResult<()> {
+pub async fn delete_saved_prompt(state: State<'_, AppState>, id: String) -> AppResult<()> {
     saved_prompts::delete_prompt(&state.db, &id).await
 }

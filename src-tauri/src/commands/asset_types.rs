@@ -36,17 +36,11 @@ pub async fn update_asset_type(
 }
 
 #[tauri::command]
-pub async fn delete_asset_type(
-    state: State<'_, AppState>,
-    id: String,
-) -> AppResult<bool> {
+pub async fn delete_asset_type(state: State<'_, AppState>, id: String) -> AppResult<bool> {
     asset_type_store::delete(&state.db, &id).await
 }
 
 #[tauri::command]
-pub async fn get_asset_type_count(
-    state: State<'_, AppState>,
-    type_id: String,
-) -> AppResult<i64> {
+pub async fn get_asset_type_count(state: State<'_, AppState>, type_id: String) -> AppResult<i64> {
     asset_type_store::get_asset_count(&state.db, &type_id).await
 }

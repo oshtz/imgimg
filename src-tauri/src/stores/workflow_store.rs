@@ -6,26 +6,42 @@ use crate::db::models::WorkflowRecord;
 use crate::error::AppResult;
 
 pub async fn list(pool: &SqlitePool) -> AppResult<Vec<WorkflowRecord>> {
-    let rows: Vec<(String, String, String, String, String, String, String, String)> =
-        sqlx::query_as(
-            "SELECT id, label, engine, output_mode, meta, template, created_at, updated_at
+    let rows: Vec<(
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+    )> = sqlx::query_as(
+        "SELECT id, label, engine, output_mode, meta, template, created_at, updated_at
              FROM workflows ORDER BY label ASC",
-        )
-        .fetch_all(pool)
-        .await?;
+    )
+    .fetch_all(pool)
+    .await?;
 
     Ok(rows.into_iter().map(to_record).collect())
 }
 
 pub async fn get_by_id(pool: &SqlitePool, id: &str) -> AppResult<Option<WorkflowRecord>> {
-    let row: Option<(String, String, String, String, String, String, String, String)> =
-        sqlx::query_as(
-            "SELECT id, label, engine, output_mode, meta, template, created_at, updated_at
+    let row: Option<(
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+    )> = sqlx::query_as(
+        "SELECT id, label, engine, output_mode, meta, template, created_at, updated_at
              FROM workflows WHERE id = ?",
-        )
-        .bind(id)
-        .fetch_optional(pool)
-        .await?;
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await?;
 
     Ok(row.map(to_record))
 }
@@ -99,7 +115,10 @@ pub async fn sync_from_disk(pool: &SqlitePool, workflows_dir: &Path) -> AppResul
     let entries = match std::fs::read_dir(workflows_dir) {
         Ok(entries) => entries,
         Err(e) => {
-            log::debug!("No workflows directory found at {}: {e}", workflows_dir.display());
+            log::debug!(
+                "No workflows directory found at {}: {e}",
+                workflows_dir.display()
+            );
             return Ok(0);
         }
     };
@@ -131,10 +150,7 @@ pub async fn sync_from_disk(pool: &SqlitePool, workflows_dir: &Path) -> AppResul
         // Skip files that don't look like imgimg workflows.
         // A valid workflow must have a "meta" object with an "engine" field,
         // or a "prompt" key (legacy format).
-        let has_meta_engine = raw
-            .get("meta")
-            .and_then(|m| m.get("engine"))
-            .is_some();
+        let has_meta_engine = raw.get("meta").and_then(|m| m.get("engine")).is_some();
         let has_prompt = raw.get("prompt").is_some();
         if !has_meta_engine && !has_prompt {
             log::debug!("Skipping non-workflow JSON file: {}", path.display());
@@ -212,7 +228,16 @@ pub async fn delete(pool: &SqlitePool, id: &str) -> AppResult<bool> {
 }
 
 fn to_record(
-    row: (String, String, String, String, String, String, String, String),
+    row: (
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+    ),
 ) -> WorkflowRecord {
     WorkflowRecord {
         id: row.0,

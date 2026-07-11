@@ -2,7 +2,7 @@ use serde::Serialize;
 use tauri::State;
 
 use crate::error::AppResult;
-use crate::providers::health::{ProviderHealthService, ProviderStatus};
+use crate::providers::health::ProviderStatus;
 use crate::state::AppState;
 
 #[derive(Debug, Serialize)]
@@ -24,8 +24,9 @@ pub async fn health_check(state: State<'_, AppState>) -> AppResult<HealthRespons
         Err(e) => format!("error: {e}"),
     };
 
+    let status = if db_status == "ok" { "ok" } else { "error" };
     Ok(HealthResponse {
-        status: "ok".to_string(),
+        status: status.to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         database: db_status,
     })
@@ -33,8 +34,8 @@ pub async fn health_check(state: State<'_, AppState>) -> AppResult<HealthRespons
 
 #[tauri::command]
 pub async fn get_provider_status(state: State<'_, AppState>) -> AppResult<ProviderStatus> {
-    let service = ProviderHealthService::new();
-    Ok(service
+    Ok(state
+        .provider_health
         .get_status(
             &state.comfy_pool,
             &state.http_client,

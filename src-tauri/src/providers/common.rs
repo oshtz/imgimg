@@ -3,7 +3,11 @@ use std::time::Duration;
 use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
 use serde::de::DeserializeOwned;
 
+use crate::db::models::Asset;
 use crate::error::{AppError, AppResult};
+use crate::services::storage::LocalStorage;
+
+pub const MAX_PROVIDER_ASSET_BYTES: u64 = 512 * 1024 * 1024;
 
 // ── HTTP Helpers ──
 
@@ -88,8 +92,78 @@ pub async fn download_bytes(
         .and_then(|v| v.to_str().ok())
         .unwrap_or("application/octet-stream")
         .to_string();
-    let bytes = resp.bytes().await?.to_vec();
+    if resp
+        .content_length()
+        .is_some_and(|length| length > MAX_PROVIDER_ASSET_BYTES)
+    {
+        return Err(AppError::ProviderError(format!(
+            "Download exceeds the {} MiB limit",
+            MAX_PROVIDER_ASSET_BYTES / (1024 * 1024)
+        )));
+    }
+    use futures::StreamExt;
+    let mut stream = resp.bytes_stream();
+    let mut bytes = Vec::new();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk?;
+        if bytes.len().saturating_add(chunk.len()) as u64 > MAX_PROVIDER_ASSET_BYTES {
+            return Err(AppError::ProviderError(format!(
+                "Download exceeds the {} MiB limit",
+                MAX_PROVIDER_ASSET_BYTES / (1024 * 1024)
+            )));
+        }
+        bytes.extend_from_slice(&chunk);
+    }
     Ok((bytes, content_type))
+}
+
+pub async fn download_asset(
+    client: &reqwest::Client,
+    storage: &LocalStorage,
+    url: &str,
+    headers: Option<HeaderMap>,
+    timeout_ms: u64,
+    generation_id: &str,
+    asset_type: &str,
+    item_index: Option<i64>,
+    filename: &str,
+) -> AppResult<Asset> {
+    let mut request = client.get(url);
+    if let Some(headers) = headers {
+        request = request.headers(headers);
+    }
+    if timeout_ms > 0 {
+        request = request.timeout(Duration::from_millis(timeout_ms));
+    }
+    let response = request.send().await?;
+    let status = response.status();
+    if !status.is_success() {
+        let body = response.text().await.unwrap_or_default();
+        return Err(AppError::ProviderError(format!(
+            "HTTP {status} downloading {url}: {body}"
+        )));
+    }
+    let extension = response
+        .headers()
+        .get(CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .map(extension_from_content_type)
+        .unwrap_or("bin");
+    let stem = std::path::Path::new(filename)
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or("asset");
+    let filename = format!("{stem}.{extension}");
+    storage
+        .write_response_asset(
+            generation_id,
+            asset_type,
+            item_index,
+            &filename,
+            response,
+            MAX_PROVIDER_ASSET_BYTES,
+        )
+        .await
 }
 
 // ── Data URL ──
@@ -139,7 +213,11 @@ pub fn infer_content_type(ext: &str) -> &'static str {
 
 /// Infer file extension from a content type string.
 pub fn extension_from_content_type(content_type: &str) -> &'static str {
-    let ct = content_type.split(';').next().unwrap_or(content_type).trim();
+    let ct = content_type
+        .split(';')
+        .next()
+        .unwrap_or(content_type)
+        .trim();
     match ct {
         "image/png" => "png",
         "image/jpeg" => "jpg",

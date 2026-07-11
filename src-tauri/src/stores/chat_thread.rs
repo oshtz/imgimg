@@ -18,13 +18,15 @@ pub async fn list_for_canvas(
 
     Ok(rows
         .into_iter()
-        .map(|(id, canvas_id, title, created_at, updated_at)| ChatThreadSummary {
-            id,
-            canvas_id,
-            title,
-            created_at,
-            updated_at,
-        })
+        .map(
+            |(id, canvas_id, title, created_at, updated_at)| ChatThreadSummary {
+                id,
+                canvas_id,
+                title,
+                created_at,
+                updated_at,
+            },
+        )
         .collect())
 }
 
@@ -43,8 +45,7 @@ pub async fn get(pool: &SqlitePool, id: &str) -> AppResult<Option<ChatThread>> {
             id,
             canvas_id,
             title,
-            messages: serde_json::from_str(&messages)
-                .unwrap_or(serde_json::Value::Array(vec![])),
+            messages: serde_json::from_str(&messages).unwrap_or(serde_json::Value::Array(vec![])),
             created_at,
             updated_at,
         })),

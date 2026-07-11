@@ -2,23 +2,15 @@ import { memo, useRef, useEffect, useState, useCallback } from "react";
 import { Group, Image, Rect, Text, Line } from "react-konva";
 import { KonvaLockIcon } from "./KonvaLockIcon";
 import type Konva from "konva";
-import { buildAuthHeaders, type ApiBaseUrl } from "../client";
-import { isTauri } from "../tauri-api";
+import type { ApiBaseUrl } from "../client";
 import { resolveStorageUrl } from "../utils/assets";
 import type { CanvasNode, CanvasEditMode } from "./types";
 import { KonvaShimmerRect } from "./KonvaShimmerRect";
 
-/** Build the API proxy URL for an asset, bypassing S3 CORS. */
-export function assetProxyUrl(apiBaseUrl: ApiBaseUrl, node: CanvasNode): string | null {
-  // In Tauri mode, use the storage resolver for /storage/ URLs
-  if (isTauri() && node.asset?.url?.startsWith("/storage/")) {
-    const resolved = resolveStorageUrl(apiBaseUrl, node.asset.url);
-    if (resolved) return resolved;
-  }
-  const asset = node.asset;
-  const genId = node.generationId ?? asset?.generationId;
-  if (!asset?.id || !genId) return null;
-  return `${apiBaseUrl}/generations/${encodeURIComponent(genId)}/assets/${encodeURIComponent(asset.id)}/raw`;
+/** Resolve a durable asset URL for the desktop runtime. */
+export function resolvedAssetUrl(apiBaseUrl: ApiBaseUrl, node: CanvasNode): string | null {
+  if (node.asset?.url) return resolveStorageUrl(apiBaseUrl, node.asset.url);
+  return node.src ?? null;
 }
 
 // ─── Shared Image Cache ────────────────────────────────────────────────────
@@ -92,13 +84,9 @@ export async function prefetchCanvasImages(
       // Double-check (another worker may have cached it)
       if (imageCacheGet(cacheKey)) continue;
       try {
-        const proxyUrl = assetProxyUrl(apiBaseUrl, node);
-        const fetchUrl = proxyUrl ?? node.src!;
-        const headers = proxyUrl ? { ...buildAuthHeaders() } : {};
-        const res = await fetch(fetchUrl, {
-          headers,
-          ...(proxyUrl ? { credentials: "include" as const } : {}),
-        });
+        const imageUrl = resolvedAssetUrl(apiBaseUrl, node);
+        const fetchUrl = imageUrl ?? node.src!;
+        const res = await fetch(fetchUrl);
         if (!res.ok) continue;
         const blob = await res.blob();
         const objectUrl = URL.createObjectURL(blob);
@@ -161,7 +149,7 @@ export const ImageNode = memo(function ImageNode({
     return () => onGroupRef?.(node.id, null);
   }, [node.id, onGroupRef]);
 
-  // Load image via shared cache or API proxy (avoids S3 CORS), falling back to direct fetch.
+  // Load images via the native asset URL resolver and shared cache.
   // The cache prevents re-fetching when viewport culling unmounts/remounts this component.
   // When node.src is undefined (loading skeleton), stay in "loading" state until src arrives.
   useEffect(() => {
@@ -188,14 +176,10 @@ export const ImageNode = memo(function ImageNode({
 
     (async () => {
       try {
-        // Prefer the API proxy when asset metadata is available
-        const proxyUrl = assetProxyUrl(apiBaseUrl, node);
-        const fetchUrl = proxyUrl ?? node.src;
-        const headers = proxyUrl ? { ...buildAuthHeaders() } : {};
-        const res = await fetch(fetchUrl!, {
-          headers,
-          ...(proxyUrl ? { credentials: "include" as const } : {}),
-        });
+        // Prefer the durable asset URL when metadata is available.
+        const imageUrl = resolvedAssetUrl(apiBaseUrl, node);
+        const fetchUrl = imageUrl ?? node.src;
+        const res = await fetch(fetchUrl!);
         if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
         const blob = await res.blob();
         if (!active) return;
@@ -219,9 +203,8 @@ export const ImageNode = memo(function ImageNode({
       } catch {
         // Fallback: load directly via <img> tag
         if (!active) return;
-        // In Tauri mode, resolve broken http://localhost:3001/storage/... URLs
         let fallbackSrc = node.src!;
-        if (isTauri() && node.asset?.url?.startsWith("/storage/")) {
+        if (node.asset?.url?.startsWith("/storage/")) {
           const resolved = resolveStorageUrl(apiBaseUrl, node.asset.url);
           if (resolved) fallbackSrc = resolved;
         }

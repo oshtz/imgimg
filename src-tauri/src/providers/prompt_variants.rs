@@ -88,10 +88,7 @@ fn parse_variants(raw: &str, expected_count: usize) -> AppResult<Vec<String>> {
         .strip_prefix("```json")
         .or_else(|| raw.trim().strip_prefix("```"))
         .unwrap_or(raw.trim());
-    let cleaned = cleaned
-        .strip_suffix("```")
-        .unwrap_or(cleaned)
-        .trim();
+    let cleaned = cleaned.strip_suffix("```").unwrap_or(cleaned).trim();
 
     // Try JSON parse first
     if let Ok(arr) = serde_json::from_str::<Vec<String>>(cleaned) {

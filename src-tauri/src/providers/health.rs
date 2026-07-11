@@ -42,6 +42,17 @@ pub struct ComfyStatus {
 pub struct SimpleStatus {
     pub available: bool,
     pub has_api_key: bool,
+    pub state: &'static str,
+}
+
+fn connection_state(has_api_key: bool, available: bool) -> &'static str {
+    if !has_api_key {
+        "unconfigured"
+    } else if available {
+        "verified"
+    } else {
+        "configured_unverified"
+    }
 }
 
 pub struct ProviderHealthService {
@@ -73,7 +84,9 @@ impl ProviderHealthService {
             }
         }
 
-        let status = self.refresh(comfy_pool, http_client, config, storage, db).await;
+        let status = self
+            .refresh(comfy_pool, http_client, config, storage, db)
+            .await;
 
         // Update cache
         {
@@ -96,16 +109,28 @@ impl ProviderHealthService {
         let comfy_future = comfy_pool.check_health(Some(5000));
 
         let openrouter = OpenRouterProxy::new(
-            http_client.clone(), config.clone(), storage.clone(), db.clone(),
+            http_client.clone(),
+            config.clone(),
+            storage.clone(),
+            db.clone(),
         );
         let replicate = ReplicateProxy::new(
-            http_client.clone(), config.clone(), storage.clone(), db.clone(),
+            http_client.clone(),
+            config.clone(),
+            storage.clone(),
+            db.clone(),
         );
         let fal = FalProxy::new(
-            http_client.clone(), config.clone(), storage.clone(), db.clone(),
+            http_client.clone(),
+            config.clone(),
+            storage.clone(),
+            db.clone(),
         );
         let kie = KieProxy::new(
-            http_client.clone(), config.clone(), storage.clone(), db.clone(),
+            http_client.clone(),
+            config.clone(),
+            storage.clone(),
+            db.clone(),
         );
 
         let (comfy_health, or_ok, rep_ok, fal_ok, kie_ok) = tokio::join!(
@@ -134,20 +159,30 @@ impl ProviderHealthService {
             openrouter: SimpleStatus {
                 available: or_ok,
                 has_api_key: or_has_key,
+                state: connection_state(or_has_key, or_ok),
             },
             replicate: SimpleStatus {
                 available: rep_ok,
                 has_api_key: rep_has_key,
+                state: connection_state(rep_has_key, rep_ok),
             },
             fal: SimpleStatus {
                 available: fal_ok,
                 has_api_key: fal_has_key,
+                state: connection_state(fal_has_key, fal_ok),
             },
             kie: SimpleStatus {
                 available: kie_ok,
                 has_api_key: kie_has_key,
+                state: connection_state(kie_has_key, kie_ok),
             },
             timestamp: crate::utils::time::now_iso(),
         }
+    }
+}
+
+impl Default for ProviderHealthService {
+    fn default() -> Self {
+        Self::new()
     }
 }

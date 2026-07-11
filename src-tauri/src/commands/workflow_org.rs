@@ -3,8 +3,8 @@ use tauri::State;
 use crate::db::models::{WorkflowFolder, WorkflowOrderItem, WorkflowOrganization};
 use crate::error::AppResult;
 use crate::state::AppState;
-use crate::stores::workflow_org;
 use crate::stores::pinned_workflow;
+use crate::stores::workflow_org;
 use crate::utils::ids::new_id;
 
 const LOCAL_USER: &str = "local-user";
@@ -15,18 +15,12 @@ pub async fn get_pinned_workflows(state: State<'_, AppState>) -> AppResult<Vec<S
 }
 
 #[tauri::command]
-pub async fn pin_workflow(
-    state: State<'_, AppState>,
-    workflow_id: String,
-) -> AppResult<()> {
+pub async fn pin_workflow(state: State<'_, AppState>, workflow_id: String) -> AppResult<()> {
     pinned_workflow::pin(&state.db, LOCAL_USER, &workflow_id).await
 }
 
 #[tauri::command]
-pub async fn unpin_workflow(
-    state: State<'_, AppState>,
-    workflow_id: String,
-) -> AppResult<()> {
+pub async fn unpin_workflow(state: State<'_, AppState>, workflow_id: String) -> AppResult<()> {
     pinned_workflow::unpin(&state.db, LOCAL_USER, &workflow_id).await
 }
 

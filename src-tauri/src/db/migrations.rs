@@ -1,4 +1,5 @@
 use sqlx::SqlitePool;
+use std::path::Path;
 
 use crate::error::AppResult;
 
@@ -10,6 +11,7 @@ const DEPRECATED_BUNDLED_WORKFLOW_IDS: &[&str] = &[
     "replicate-grok-imagine-video",
     "replicate-qwen3-tts",
 ];
+pub const LATEST_SCHEMA_VERSION: i64 = 3;
 
 /// Add a column to a table if it doesn't already exist. Returns `true` if the
 /// column was added, `false` if it was already present. Real ALTER errors
@@ -36,7 +38,14 @@ async fn add_column_if_missing(
 }
 
 /// Run all database migrations. Creates tables if they don't exist.
-pub async fn run_migrations(pool: &SqlitePool) -> AppResult<()> {
+pub async fn run_migrations(pool: &SqlitePool, db_path: Option<&Path>) -> AppResult<()> {
+    let previous_version = current_schema_version(pool).await?;
+    if previous_version < LATEST_SCHEMA_VERSION {
+        if let Some(path) = db_path {
+            backup_database_if_populated(pool, path, previous_version).await?;
+        }
+    }
+
     // Enable WAL mode for better concurrent read performance
     sqlx::query("PRAGMA journal_mode=WAL").execute(pool).await?;
     sqlx::query("PRAGMA foreign_keys=ON").execute(pool).await?;
@@ -44,6 +53,14 @@ pub async fn run_migrations(pool: &SqlitePool) -> AppResult<()> {
     sqlx::query("PRAGMA busy_timeout=5000")
         .execute(pool)
         .await?;
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS schema_migrations (
+            version INTEGER PRIMARY KEY,
+            applied_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+        )",
+    )
+    .execute(pool)
+    .await?;
 
     // Users table (single local user, kept for FK integrity)
     sqlx::query(
@@ -165,6 +182,32 @@ pub async fn run_migrations(pool: &SqlitePool) -> AppResult<()> {
         .await?;
     sqlx::query(
         "CREATE INDEX IF NOT EXISTS idx_assets_version_lookup ON assets(generation_id, type, item_index)",
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query(
+        "UPDATE assets SET is_active = 0
+         WHERE is_active = 1 AND EXISTS (
+           SELECT 1 FROM assets newer
+           WHERE newer.generation_id = assets.generation_id
+             AND newer.type = assets.type
+             AND (newer.item_index = assets.item_index OR (newer.item_index IS NULL AND assets.item_index IS NULL))
+             AND newer.rowid > assets.rowid
+         )",
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_assets_one_active_indexed_slot
+         ON assets(generation_id, type, item_index)
+         WHERE is_active = 1 AND item_index IS NOT NULL",
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_assets_one_active_null_slot
+         ON assets(generation_id, type)
+         WHERE is_active = 1 AND item_index IS NULL",
     )
     .execute(pool)
     .await?;
@@ -420,7 +463,71 @@ pub async fn run_migrations(pool: &SqlitePool) -> AppResult<()> {
     .execute(pool)
     .await?;
 
-    log::info!("Database migrations completed successfully");
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS workspace_state (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+        )",
+    )
+    .execute(pool)
+    .await?;
+
+    for version in (previous_version + 1)..=LATEST_SCHEMA_VERSION {
+        sqlx::query("INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)")
+            .bind(version)
+            .execute(pool)
+            .await?;
+    }
+    log::info!("Database migrations completed at schema version {LATEST_SCHEMA_VERSION}");
+    Ok(())
+}
+
+async fn current_schema_version(pool: &SqlitePool) -> AppResult<i64> {
+    let exists: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'schema_migrations'",
+    )
+    .fetch_one(pool)
+    .await?;
+    if exists == 0 {
+        return Ok(0);
+    }
+    Ok(
+        sqlx::query_scalar("SELECT COALESCE(MAX(version), 0) FROM schema_migrations")
+            .fetch_one(pool)
+            .await?,
+    )
+}
+
+async fn backup_database_if_populated(
+    pool: &SqlitePool,
+    db_path: &Path,
+    previous_version: i64,
+) -> AppResult<()> {
+    let user_table_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM sqlite_master
+         WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name != 'schema_migrations'",
+    )
+    .fetch_one(pool)
+    .await?;
+    if user_table_count == 0 {
+        return Ok(());
+    }
+
+    let parent = db_path.parent().unwrap_or_else(|| Path::new("."));
+    let stem = db_path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or("imgimg");
+    let backup_path = parent.join(format!(
+        "{stem}.pre-v{LATEST_SCHEMA_VERSION}-from-v{previous_version}-{}.db",
+        uuid::Uuid::new_v4()
+    ));
+    let escaped = backup_path.to_string_lossy().replace('\'', "''");
+    sqlx::query(&format!("VACUUM INTO '{escaped}'"))
+        .execute(pool)
+        .await?;
+    log::info!("Created pre-migration backup at {}", backup_path.display());
     Ok(())
 }
 
@@ -549,7 +656,7 @@ mod tests {
     #[tokio::test]
     async fn removes_deprecated_bundled_workflows_and_local_references() {
         let pool = memory_pool().await;
-        run_migrations(&pool).await.expect("migrate");
+        run_migrations(&pool, None).await.expect("migrate");
 
         sqlx::query(
             "INSERT INTO workflows (id, label, engine, output_mode, meta, template, bundled)

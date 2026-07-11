@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { TbMenu2, TbWand } from "react-icons/tb";
 import {
   createGeneration,
   createInpaintAssetVersion,
   createOutpaintGeneration,
   deleteGeneration,
+  cancelGeneration,
+  retryGeneration,
   streamEnhancedPrompt,
   getCurrentUser,
   getFeatureWorkflowConfig,
@@ -19,7 +21,6 @@ import {
   type ApiBaseUrl,
   type AssetTypeForRegen,
   type AssetTypeForInpaint,
-  buildAuthHeaders,
   getPresets,
   type UserPreset,
   getReplicateModelParameters,
@@ -28,19 +29,14 @@ import {
 import { PromptCenterpiece, type PromptCenterpieceState } from "./components/PromptCenterpiece";
 import { PromptSidebarResizeHandle } from "./components/PromptSidebarResizeHandle";
 import { GenerationHistoryList } from "./components/GenerationHistoryList";
-import { GalleryPanel } from "./components/GalleryPanel";
 import { GenerationDetailPanel, type GenerationDetailSelection, type OutpaintParams } from "./components/GenerationDetailPanel";
 import { Sidebar, MobileSidebarOverlay } from "./components/Sidebar";
-import type { ThemePreference, WidthPreference, CardSize, CardThumbnailMode, PromptPosition } from "./components/SettingsPanel";
+import type { ThemePreference, WidthPreference, CardSize, CardThumbnailMode, PromptPosition } from "./components/preferences";
 import { TitleBar } from "./components/TitleBar";
-import { AdminPanel, type SettingsTab } from "./components/admin/AdminPanel";
+import type { SettingsTab } from "./components/admin/AdminPanel";
+import { ConfirmDialog } from "./components/admin/ConfirmDialog";
 import { WorkflowCardGrid, isWorkflowVisibleInGrid } from "./components/WorkflowCardGrid";
-import { CanvasWorkspace } from "./canvas";
-import { CompareView } from "./components/CompareView";
 import type { Asset, CurrentUser, Generation, Model, SavedPrompt } from "./types";
-import { PromptManagerPanel } from "./components/PromptManagerPanel";
-import { AudioDesk } from "./audioDesk/AudioDesk";
-import { IterateWorkspace } from "./iterate/IterateWorkspace";
 import type { WorkflowParameter, DiscoveredModel } from "./api";
 import { useGenerationEvents } from "./useGenerationEvents";
 import { aspectRatioToSize, isAspectRatio, nearestAspectRatio, type WorkflowId } from "./workflows";
@@ -54,7 +50,7 @@ import { useCanvasManager } from "./hooks/useCanvasManager";
 import { useWorkflowManager } from "./hooks/useWorkflowManager";
 import { extractError } from "./utils/extractError";
 import { WelcomeWizard } from "./components/onboarding/WelcomeWizard";
-import { isOnboardingCompleted, loadBundledWorkflows, isFirstGenCompleted, setFirstGenCompleted } from "./lib/onboarding";
+import { isOnboardingCompleted, isFirstGenCompleted, setFirstGenCompleted } from "./lib/onboarding";
 import {
   DEFAULT_UI_SCALE,
   UI_SCALE_STORAGE_KEY,
@@ -81,6 +77,18 @@ import {
   setWorkflowSelection,
   type WorkflowSelectionMap,
 } from "./lib/workflowModelSelections";
+
+const GalleryPanel = lazy(() => import("./components/GalleryPanel").then((module) => ({ default: module.GalleryPanel })));
+const AdminPanel = lazy(() => import("./components/admin/AdminPanel").then((module) => ({ default: module.AdminPanel })));
+const CanvasWorkspace = lazy(() => import("./canvas").then((module) => ({ default: module.CanvasWorkspace })));
+const CompareView = lazy(() => import("./components/CompareView").then((module) => ({ default: module.CompareView })));
+const PromptManagerPanel = lazy(() => import("./components/PromptManagerPanel").then((module) => ({ default: module.PromptManagerPanel })));
+const AudioDesk = lazy(() => import("./audioDesk/AudioDesk").then((module) => ({ default: module.AudioDesk })));
+const IterateWorkspace = lazy(() => import("./iterate/IterateWorkspace").then((module) => ({ default: module.IterateWorkspace })));
+
+function SurfaceFallback() {
+  return <div className="flex min-h-48 flex-1 items-center justify-center text-sm text-zinc-500">Loading…</div>;
+}
 
 function getImageDimensions(dataUrl: string): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
@@ -184,6 +192,7 @@ export default function App() {
     workflowPreviewsFromApi,
     providerStatus,
     assetTypeRegistry,
+    workflowError,
     refreshWorkflows,
     refreshAssetTypes,
     refreshWorkflowPreviews,
@@ -218,6 +227,8 @@ export default function App() {
   const [replicateModelPromptField, setReplicateModelPromptField] = useState<string>("prompt");
   const [replicateModelReadme, setReplicateModelReadme] = useState<string | null>(null);
   const [replicateModelLoading, setReplicateModelLoading] = useState(false);
+  const [dynamicModelError, setDynamicModelError] = useState<string | null>(null);
+  const [dynamicModelRetry, setDynamicModelRetry] = useState(0);
   const [pinnedReplicateModelsByType, setPinnedReplicateModelsByType] = usePersistedState<
     Record<string, DiscoveredModel[]>
   >("imgimg.pinnedReplicateModels.v2", {});
@@ -301,6 +312,7 @@ export default function App() {
   const [galleryItems, setGalleryItems] = useState<Generation[]>([]);
   const [activeGenerationId, setActiveGenerationId] = useState<string | null>(null);
   const [detail, setDetail] = useState<GenerationDetailSelection | null>(null);
+  const [generationToDelete, setGenerationToDelete] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [enhancingPrompt, setEnhancingPrompt] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -323,20 +335,12 @@ export default function App() {
   const effectiveEmail = currentUser?.email ?? "user@imgimg.local";
 
   useGenerationEvents({
-    apiBaseUrl,
     generationId: null,
-    authToken: null,
     enabled: true,
     onEvent: (event) => {
       if (event.type === "job") {
-        const nextStatus =
-          event.data.state === "running"
-            ? "running"
-            : event.data.state === "succeeded"
-              ? "succeeded"
-              : event.data.state === "failed"
-              ? "failed"
-                : "queued";
+        if (event.data.state !== "queued" && event.data.state !== "running") return;
+        const nextStatus = event.data.state;
 
         setHistory((prev) => {
           const id = event.data.generationId;
@@ -410,48 +414,6 @@ export default function App() {
         return;
       }
 
-      if (event.type === "generation_deleted") {
-        setHistory((prev) => prev.filter((g) => g.id !== event.data.generationId));
-        setActiveGenerationId((prev) => (prev === event.data.generationId ? null : prev));
-        setDetail((prev) => (prev && prev.generationId === event.data.generationId ? null : prev));
-        return;
-      }
-
-      // Handle slot-specific filling events (for non-blocking external workflows)
-      if (event.type === "slot_filling") {
-        const slotKey = `${event.data.generationId}:${event.data.slotIndex}`;
-        if (event.data.status === "running") {
-          setFillingSlots((prev) => {
-            const next = new Set(prev);
-            next.add(slotKey);
-            return next;
-          });
-        } else {
-          setFillingSlots((prev) => {
-            const next = new Set(prev);
-            next.delete(slotKey);
-            return next;
-          });
-        }
-      }
-
-      // Handle rembg (remove background) events
-      if (event.type === "rembg") {
-        const rembgKey = `${event.data.generationId}:${event.data.itemIndex}`;
-        if (event.data.status === "running") {
-          setRembgProcessing((prev) => {
-            const next = new Set(prev);
-            next.add(rembgKey);
-            return next;
-          });
-        } else {
-          setRembgProcessing((prev) => {
-            const next = new Set(prev);
-            next.delete(rembgKey);
-            return next;
-          });
-        }
-      }
     }
   });
 
@@ -581,6 +543,7 @@ export default function App() {
       setReplicateModelPromptField("prompt");
       setReplicateModelReadme(null);
       setReplicateModelLoading(false);
+      setDynamicModelError(null);
       return;
     }
 
@@ -592,6 +555,7 @@ export default function App() {
     setReplicateModelPromptField("prompt");
     setReplicateModelReadme(null);
     setReplicateModelLoading(true);
+    setDynamicModelError(null);
 
     (async () => {
       try {
@@ -604,6 +568,7 @@ export default function App() {
         setReplicateModelMaxImageInputs(result.maxFileInputs ?? undefined);
         setReplicateModelPromptField(result.promptField ?? "prompt");
         setReplicateModelReadme(result.readme ?? null);
+        setDynamicModelError(null);
         setPromptUi((prev) => ({ ...prev, workflowParams: {} }));
       } catch (e) {
         if (cancelled) return;
@@ -613,6 +578,7 @@ export default function App() {
         setReplicateModelMaxImageInputs(undefined);
         setReplicateModelPromptField("prompt");
         setReplicateModelReadme(null);
+        setDynamicModelError(extractError(e, "Could not load model settings"));
       } finally {
         if (!cancelled) setReplicateModelLoading(false);
       }
@@ -621,7 +587,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [apiBaseUrl, replicateModelId, selectedWorkflow?.dynamicModel, selectedWorkflow?.engine, setPromptUi]);
+  }, [apiBaseUrl, replicateModelId, selectedWorkflow?.dynamicModel, selectedWorkflow?.engine, setPromptUi, dynamicModelRetry]);
 
   const isCanvasMode = activeView === "canvas" && activeCanvasId != null;
   const promptIsSidebar = selectedWorkflow !== null && isPromptSidebarPosition(promptPosition);
@@ -1166,6 +1132,35 @@ export default function App() {
     }
   }
 
+  async function onCancelGeneration(genId: string) {
+    setLoading(true);
+    setError(null);
+    try {
+      const updated = await cancelGeneration(apiBaseUrl, genId);
+      setHistory((prev) => prev.map((generation) => generation.id === genId ? { ...updated, queuePosition: null } : generation));
+    } catch (e) {
+      setError(extractError(e, "Cancel failed"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function onRetryGeneration(genId: string) {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await retryGeneration(apiBaseUrl, genId);
+      const next = { ...result.generation, queuePosition: result.queuePosition };
+      setHistory((prev) => [next, ...prev.filter((generation) => generation.id !== next.id)]);
+      setActiveGenerationId(next.id);
+      setDetail({ generationId: next.id, assetKey: null });
+    } catch (e) {
+      setError(extractError(e, "Retry failed"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function onGenerateAgain(g: Generation) {
     setLoading(true);
     setError(null);
@@ -1378,15 +1373,7 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      const { blob, filename } = await downloadGenerationAssetsZip(apiBaseUrl, generationId);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      await downloadGenerationAssetsZip(apiBaseUrl, generationId);
     } catch (e) {
       setError(extractError(e, "Download failed"));
     } finally {
@@ -1561,7 +1548,7 @@ export default function App() {
               )}
             >
               {activeView === "gallery" ? (
-                <GalleryPanel
+                <Suspense fallback={<SurfaceFallback />}><GalleryPanel
                   apiBaseUrl={apiBaseUrl}
                   workflows={workflowsRemote}
                   assetTypeRegistry={assetTypeRegistry}
@@ -1573,24 +1560,23 @@ export default function App() {
                   onOpenAsset={(g, asset) => {
                     setDetail({ generationId: g.id, assetKey: `${asset.type}:${asset.itemIndex ?? "null"}` });
                   }}
-                  authToken={null}
                   eventsEnabled={true}
-                />
+                /></Suspense>
               ) : activeView === "prompts" ? (
-                <PromptManagerPanel
+                <Suspense fallback={<SurfaceFallback />}><PromptManagerPanel
                   savedPrompts={savedPrompts}
                   onSavedPromptsChange={setSavedPrompts}
-                />
+                /></Suspense>
               ) : activeView === "compare" ? (
-                <CompareView
+                <Suspense fallback={<SurfaceFallback />}><CompareView
                   apiBaseUrl={apiBaseUrl}
                   providerStatus={providerStatus}
                   history={history}
                   assetUrl={(asset) => assetUrl(apiBaseUrl, asset)}
                   savedPrompts={savedPrompts}
-                />
+                /></Suspense>
               ) : activeView === "audio" ? (
-                <AudioDesk
+                <Suspense fallback={<SurfaceFallback />}><AudioDesk
                   apiBaseUrl={apiBaseUrl}
                   workflows={workflowsRemote}
                   history={history}
@@ -1602,9 +1588,9 @@ export default function App() {
                     setActiveGenerationId(g.id);
                     setDetail({ generationId: g.id, assetKey: `${asset.type}:${asset.itemIndex ?? "null"}` });
                   }}
-                />
+                /></Suspense>
               ) : activeView === "iterate" ? (
-                <IterateWorkspace
+                <Suspense fallback={<SurfaceFallback />}><IterateWorkspace
                   apiBaseUrl={apiBaseUrl}
                   workflows={workflowsRemote}
                   history={history}
@@ -1615,9 +1601,9 @@ export default function App() {
                     setActiveGenerationId(g.id);
                     setDetail({ generationId: g.id, assetKey: `${asset.type}:${asset.itemIndex ?? "null"}` });
                   }}
-                />
+                /></Suspense>
               ) : isCanvasMode ? (
-                <CanvasWorkspace
+                <Suspense fallback={<SurfaceFallback />}><CanvasWorkspace
                   key={activeCanvasId!}
                   apiBaseUrl={apiBaseUrl}
                   canvasWorkflowId={workflowsRemote.find((w) => w.ui?.canvasMode)?.id ?? workflowsRemote[0]?.id ?? ""}
@@ -1634,7 +1620,7 @@ export default function App() {
                   pinnedReplicateModels={pinnedReplicateModels}
                   onPinReplicateModel={handlePinReplicateModel}
                   onUnpinReplicateModel={handleUnpinReplicateModel}
-                />
+                /></Suspense>
               ) : (
                 <div className={cn(
                   "flex min-h-0 flex-1 flex-col",
@@ -1675,21 +1661,23 @@ export default function App() {
                               <TbWand className="h-12 w-12 text-zinc-600 dark:text-zinc-400" />
                             </div>
                           </div>
-                          <h2 className="mb-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">No workflows available</h2>
-                          <p className="mb-4 max-w-md text-sm text-zinc-600 dark:text-zinc-400">
-                            Workflows appear here when you connect a provider with an API key.
-                          </p>
-                          <div className="flex justify-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setShowOnboarding(true)}
+                           <h2 className="mb-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+                             {workflowError ? "Could not load workflows" : "No workflows available"}
+                           </h2>
+                           <p className="mb-4 max-w-md text-sm text-zinc-600 dark:text-zinc-400">
+                             {workflowError ?? "Workflows appear here when you connect a provider with an API key."}
+                           </p>
+                           <div className="flex justify-center gap-3">
+                             <button
+                               type="button"
+                               onClick={() => workflowError ? void refreshWorkflows() : setShowOnboarding(true)}
                               className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
                             >
-                              Set Up Providers
+                               {workflowError ? "Retry" : "Set Up Providers"}
                             </button>
                             <button
                               type="button"
-                              onClick={() => setAdminPanelOpen(true)}
+                              onClick={() => { setAdminPanelTab("api-keys"); setAdminPanelOpen(true); }}
                               className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
                             >
                               Open Settings
@@ -1711,7 +1699,7 @@ export default function App() {
                           }
                         }}
                         onGenerate={() => void onGenerate()}
-                        disabled={loading}
+                        disabled={loading || replicateModelLoading || Boolean(dynamicModelError)}
                         enhancing={enhancingPrompt}
                         workflowSelected={selectedWorkflow !== null}
                         status={activeGeneration?.status ?? "idle"}
@@ -1765,12 +1753,16 @@ export default function App() {
                         onDynamicModelSelect={handleDynamicModelSelect}
                         onDynamicModelClear={handleReplicateModelClear}
                         dynamicModelReadme={replicateModelReadme}
+                        dynamicModelLoading={replicateModelLoading}
+                        dynamicModelError={dynamicModelError}
+                        onRetryDynamicModel={() => setDynamicModelRetry((value) => value + 1)}
                         pinnedDynamicModels={pinnedReplicateModels}
                         onPinDynamicModel={handlePinReplicateModel}
                         onUnpinDynamicModel={handleUnpinReplicateModel}
                         providerAvailable={selectedWorkflow?.providerAvailable}
                         engine={selectedWorkflow?.engine}
-                        onOpenSettings={() => { setAdminPanelTab("prompt-enhancer"); setAdminPanelOpen(true); }}
+                        onOpenPromptSettings={() => { setAdminPanelTab("prompt-enhancer"); setAdminPanelOpen(true); }}
+                        onOpenApiKeys={() => { setAdminPanelTab("api-keys"); setAdminPanelOpen(true); }}
                         promptPosition={promptPosition}
                       />
                     )}
@@ -1808,7 +1800,7 @@ export default function App() {
                           setActiveGenerationId(g.id);
                           setDetail({ generationId: g.id, assetKey: null });
                         }}
-                        onDelete={(generationId) => void onDelete(generationId)}
+                        onDelete={setGenerationToDelete}
                         assetUrl={assetUrl}
                         onOpenAsset={(g, asset) => {
                           setActiveGenerationId(g.id);
@@ -1838,7 +1830,9 @@ export default function App() {
         loading={loading}
         onClose={() => setDetail(null)}
         onSelectAssetKey={(next) => setDetail((prev) => (prev ? { ...prev, assetKey: next } : prev))}
-        onDeleteGeneration={(generationId) => void onDelete(generationId)}
+        onDeleteGeneration={setGenerationToDelete}
+        onCancelGeneration={(generationId) => void onCancelGeneration(generationId)}
+        onRetryGeneration={(generationId) => void onRetryGeneration(generationId)}
         onUsePrompt={(nextPrompt, imageInputUrl, imageInputUrls) => {
           setPrompt(nextPrompt);
           const sources =
@@ -1889,7 +1883,7 @@ export default function App() {
         }
         onSendToWorkflow={(targetWorkflowId, imageUrl) => {
           setWorkflow(targetWorkflowId);
-          fetch(imageUrl, { headers: buildAuthHeaders(), credentials: "include" })
+          fetch(imageUrl)
             .then((res) => res.blob())
             .then((blob) => {
               const reader = new FileReader();
@@ -1923,7 +1917,7 @@ export default function App() {
         versionSwitching={versionSwitching}
       />
 
-      <AdminPanel
+      <Suspense fallback={null}><AdminPanel
         isOpen={adminPanelOpen}
         onClose={() => { setAdminPanelOpen(false); setAdminPanelTab(undefined); void refreshWorkflows(); void refreshAssetTypes(); void refreshModels(); void getFeatureWorkflowConfig(apiBaseUrl).then(setFeatureWorkflows).catch(() => {}); }}
         apiBaseUrl={apiBaseUrl}
@@ -1941,6 +1935,19 @@ export default function App() {
         onPromptPositionChange={setPromptPosition}
         onWorkflowsChanged={() => void refreshWorkflows()}
         initialTab={adminPanelTab}
+      /></Suspense>
+
+      <ConfirmDialog
+        isOpen={generationToDelete !== null}
+        title="Delete generation?"
+        message="This permanently removes the generation and its local assets."
+        confirmLabel="Delete"
+        onCancel={() => setGenerationToDelete(null)}
+        onConfirm={() => {
+          const id = generationToDelete;
+          setGenerationToDelete(null);
+          if (id) void onDelete(id);
+        }}
       />
 
       {showOnboarding && (

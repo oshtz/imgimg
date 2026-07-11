@@ -9,9 +9,7 @@ use crate::stores::lora_settings;
 const DEFAULT_GAME: &str = "default";
 
 #[tauri::command]
-pub async fn list_available_loras(
-    state: State<'_, AppState>,
-) -> AppResult<Vec<String>> {
+pub async fn list_available_loras(state: State<'_, AppState>) -> AppResult<Vec<String>> {
     let lora_svc = crate::providers::lora_service::LoraService::new();
     lora_svc.list_available(&state.comfy_pool).await
 }
@@ -75,7 +73,9 @@ pub async fn search_provider_models(
         "replicate" => {
             let token = crate::stores::admin_settings::get_replicate_api_key(&state.db)
                 .await?
-                .ok_or_else(|| crate::error::AppError::Config("Replicate API key not configured".into()))?;
+                .ok_or_else(|| {
+                    crate::error::AppError::Config("Replicate API key not configured".into())
+                })?;
             let (models, next) = model_discovery::search_replicate_models(
                 &state.http_client,
                 &token,
@@ -89,7 +89,9 @@ pub async fn search_provider_models(
         "fal" => {
             let key = crate::stores::admin_settings::get_fal_api_key(&state.db)
                 .await?
-                .ok_or_else(|| crate::error::AppError::Config("fal.ai API key not configured".into()))?;
+                .ok_or_else(|| {
+                    crate::error::AppError::Config("fal.ai API key not configured".into())
+                })?;
             let (models, next) = model_discovery::search_fal_models(
                 &state.http_client,
                 &key,
@@ -103,7 +105,9 @@ pub async fn search_provider_models(
         "openrouter" => {
             let key = crate::stores::admin_settings::get_openrouter_api_key(&state.db)
                 .await?
-                .ok_or_else(|| crate::error::AppError::Config("OpenRouter API key not configured".into()))?;
+                .ok_or_else(|| {
+                    crate::error::AppError::Config("OpenRouter API key not configured".into())
+                })?;
             let (models, next) = model_discovery::search_openrouter_models(
                 &state.http_client,
                 &key,
@@ -113,7 +117,9 @@ pub async fn search_provider_models(
             .await?;
             Ok(serde_json::json!({ "models": models, "nextCursor": next }))
         }
-        _ => Err(crate::error::AppError::BadRequest(format!("Unknown provider: {provider}"))),
+        _ => Err(crate::error::AppError::BadRequest(format!(
+            "Unknown provider: {provider}"
+        ))),
     }
 }
 
@@ -127,20 +133,34 @@ pub async fn get_provider_model_detail(
         "replicate" => {
             let token = crate::stores::admin_settings::get_replicate_api_key(&state.db)
                 .await?
-                .ok_or_else(|| crate::error::AppError::Config("Replicate API key not configured".into()))?;
+                .ok_or_else(|| {
+                    crate::error::AppError::Config("Replicate API key not configured".into())
+                })?;
             let parts: Vec<&str> = model_id.splitn(2, '/').collect();
             if parts.len() != 2 {
-                return Err(crate::error::AppError::BadRequest("Invalid model ID format, expected owner/name".into()));
+                return Err(crate::error::AppError::BadRequest(
+                    "Invalid model ID format, expected owner/name".into(),
+                ));
             }
-            model_discovery::get_replicate_model_detail(&state.http_client, &token, parts[0], parts[1]).await
+            model_discovery::get_replicate_model_detail(
+                &state.http_client,
+                &token,
+                parts[0],
+                parts[1],
+            )
+            .await
         }
         "fal" => {
             let key = crate::stores::admin_settings::get_fal_api_key(&state.db)
                 .await?
-                .ok_or_else(|| crate::error::AppError::Config("fal.ai API key not configured".into()))?;
+                .ok_or_else(|| {
+                    crate::error::AppError::Config("fal.ai API key not configured".into())
+                })?;
             model_discovery::get_fal_model_detail(&state.http_client, &key, &model_id).await
         }
-        _ => Err(crate::error::AppError::BadRequest(format!("Unknown provider: {provider}"))),
+        _ => Err(crate::error::AppError::BadRequest(format!(
+            "Unknown provider: {provider}"
+        ))),
     }
 }
 

@@ -1,9 +1,10 @@
 use serde::Serialize;
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
+use tokio::task::AbortHandle;
 
 use crate::services::event_hub::EventHub;
 
@@ -23,84 +24,34 @@ struct QueueJob {
     run: BoxFuture,
 }
 
-/// FIFO queue with bounded concurrency for GPU-bound engines (ComfyUI).
-pub struct FifoQueue {
-    inner: Arc<Mutex<FifoQueueInner>>,
+/// The single bounded executor for every generation operation.
+pub struct GenerationQueue {
+    inner: Arc<Mutex<QueueState>>,
     event_hub: EventHub,
     notify: Arc<Notify>,
 }
 
-struct FifoQueueInner {
+struct QueueState {
     pending: VecDeque<QueueJob>,
-    running: Vec<String>,
+    running: HashMap<String, AbortHandle>,
     concurrency: usize,
 }
 
-impl FifoQueue {
+impl GenerationQueue {
     pub fn new(concurrency: usize, event_hub: EventHub) -> Self {
-        let inner = Arc::new(Mutex::new(FifoQueueInner {
-            pending: VecDeque::new(),
-            running: Vec::new(),
-            concurrency: concurrency.max(1),
-        }));
-        let notify = Arc::new(Notify::new());
-
         Self {
-            inner,
+            inner: Arc::new(Mutex::new(QueueState {
+                pending: VecDeque::new(),
+                running: HashMap::new(),
+                concurrency: concurrency.max(1),
+            })),
             event_hub,
-            notify,
+            notify: Arc::new(Notify::new()),
         }
     }
 
-    /// Must be called from within a Tokio runtime context.
+    /// Must be called once from a Tokio runtime context.
     pub fn start(&self) {
-        self.spawn_pump();
-    }
-
-    pub async fn enqueue<F>(&self, job_id: String, run: F)
-    where
-        F: Future<Output = Result<(), String>> + Send + 'static,
-    {
-        let mut inner = self.inner.lock().await;
-        inner.pending.push_back(QueueJob {
-            job_id: job_id.clone(),
-            run: Box::pin(run),
-        });
-
-        let position = inner.pending.len();
-        drop(inner);
-
-        self.event_hub.emit_queue_event(&QueueEvent {
-            job_id,
-            state: "queued".into(),
-            position: Some(position),
-            error: None,
-        });
-
-        self.notify.notify_one();
-    }
-
-    pub async fn cancel(&self, job_id: &str) -> bool {
-        let mut inner = self.inner.lock().await;
-        if inner.running.contains(&job_id.to_string()) {
-            return false;
-        }
-        let len_before = inner.pending.len();
-        inner.pending.retain(|j| j.job_id != job_id);
-        let removed = inner.pending.len() < len_before;
-        if removed {
-            drop(inner);
-            self.event_hub.emit_queue_event(&QueueEvent {
-                job_id: job_id.into(),
-                state: "failed".into(),
-                position: None,
-                error: Some("Canceled".into()),
-            });
-        }
-        removed
-    }
-
-    fn spawn_pump(&self) {
         let inner = self.inner.clone();
         let event_hub = self.event_hub.clone();
         let notify = self.notify.clone();
@@ -108,22 +59,26 @@ impl FifoQueue {
         tokio::spawn(async move {
             loop {
                 notify.notified().await;
-
                 loop {
                     let job = {
                         let mut state = inner.lock().await;
                         if state.running.len() >= state.concurrency || state.pending.is_empty() {
                             break;
                         }
-                        let job = state.pending.pop_front().unwrap();
-                        state.running.push(job.job_id.clone());
-                        job
+                        state
+                            .pending
+                            .pop_front()
+                            .expect("pending queue was checked")
                     };
 
                     let job_id = job.job_id.clone();
-                    let inner_clone = inner.clone();
-                    let event_hub_clone = event_hub.clone();
-                    let notify_clone = notify.clone();
+                    let task = tokio::spawn(job.run);
+                    let abort_handle = task.abort_handle();
+                    inner
+                        .lock()
+                        .await
+                        .running
+                        .insert(job_id.clone(), abort_handle);
 
                     event_hub.emit_queue_event(&QueueEvent {
                         job_id: job_id.clone(),
@@ -132,80 +87,92 @@ impl FifoQueue {
                         error: None,
                     });
 
+                    let task_inner = inner.clone();
+                    let task_hub = event_hub.clone();
+                    let task_notify = notify.clone();
                     tokio::spawn(async move {
-                        let result = job.run.await;
-
-                        let event = match result {
-                            Ok(()) => QueueEvent {
+                        let event = match task.await {
+                            Ok(Ok(())) => QueueEvent {
                                 job_id: job_id.clone(),
                                 state: "succeeded".into(),
                                 position: None,
                                 error: None,
                             },
-                            Err(msg) => QueueEvent {
+                            Ok(Err(message)) => QueueEvent {
                                 job_id: job_id.clone(),
                                 state: "failed".into(),
                                 position: None,
-                                error: Some(msg),
+                                error: Some(message),
+                            },
+                            Err(error) if error.is_cancelled() => QueueEvent {
+                                job_id: job_id.clone(),
+                                state: "cancelled".into(),
+                                position: None,
+                                error: None,
+                            },
+                            Err(error) => QueueEvent {
+                                job_id: job_id.clone(),
+                                state: "failed".into(),
+                                position: None,
+                                error: Some(error.to_string()),
                             },
                         };
-
-                        event_hub_clone.emit_queue_event(&event);
-
-                        {
-                            let mut state = inner_clone.lock().await;
-                            state.running.retain(|id| id != &job_id);
-                        }
-
-                        notify_clone.notify_one();
+                        task_hub.emit_queue_event(&event);
+                        task_inner.lock().await.running.remove(&job_id);
+                        task_notify.notify_one();
                     });
                 }
             }
         });
     }
-}
 
-/// Concurrent queue for fire-and-forget engines (Replicate, OpenRouter).
-/// Runs jobs immediately without waiting.
-pub struct ConcurrentQueue {
-    event_hub: EventHub,
-}
-
-impl ConcurrentQueue {
-    pub fn new(event_hub: EventHub) -> Self {
-        Self { event_hub }
-    }
-
-    pub fn enqueue<F>(&self, job_id: String, run: F)
+    /// Enqueue work and return its one-based pending position.
+    pub async fn enqueue<F>(&self, job_id: String, run: F) -> usize
     where
         F: Future<Output = Result<(), String>> + Send + 'static,
     {
-        let event_hub = self.event_hub.clone();
-
-        event_hub.emit_queue_event(&QueueEvent {
+        let mut state = self.inner.lock().await;
+        state.pending.push_back(QueueJob {
             job_id: job_id.clone(),
-            state: "running".into(),
-            position: Some(0),
+            run: Box::pin(run),
+        });
+        let position = state.pending.len();
+        drop(state);
+
+        self.event_hub.emit_queue_event(&QueueEvent {
+            job_id,
+            state: "queued".into(),
+            position: Some(position),
             error: None,
         });
+        self.notify.notify_one();
+        position
+    }
 
-        tokio::spawn(async move {
-            let result = run.await;
-            let event = match result {
-                Ok(()) => QueueEvent {
-                    job_id,
-                    state: "succeeded".into(),
-                    position: None,
-                    error: None,
-                },
-                Err(msg) => QueueEvent {
-                    job_id,
-                    state: "failed".into(),
-                    position: None,
-                    error: Some(msg),
-                },
-            };
-            event_hub.emit_queue_event(&event);
-        });
+    /// Cancel pending or running work. Dropping the provider future also cancels its HTTP request.
+    pub async fn cancel(&self, job_id: &str) -> bool {
+        let mut state = self.inner.lock().await;
+        if let Some(handle) = state.running.get(job_id) {
+            if handle.is_finished() {
+                return false;
+            }
+            handle.abort();
+            return true;
+        }
+
+        let before = state.pending.len();
+        state.pending.retain(|job| job.job_id != job_id);
+        let removed = state.pending.len() != before;
+        drop(state);
+
+        if removed {
+            self.event_hub.emit_queue_event(&QueueEvent {
+                job_id: job_id.into(),
+                state: "cancelled".into(),
+                position: None,
+                error: None,
+            });
+        }
+        removed
     }
 }

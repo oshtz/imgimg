@@ -107,7 +107,11 @@ pub async fn create(pool: &SqlitePool, record: &AssetTypeRecord) -> AppResult<As
         .ok_or_else(|| AppError::Internal("Failed to create asset type".into()))
 }
 
-pub async fn update(pool: &SqlitePool, id: &str, record: &AssetTypeRecord) -> AppResult<AssetTypeRecord> {
+pub async fn update(
+    pool: &SqlitePool,
+    id: &str,
+    record: &AssetTypeRecord,
+) -> AppResult<AssetTypeRecord> {
     sqlx::query(
         "UPDATE asset_types SET display_name = ?, description = ?, aspect_ratio = ?,
          display_sort_order = ?, grid_row = ?, grid_size_class = ?,

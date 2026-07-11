@@ -1,6 +1,6 @@
 [package]
 name = "imgimg"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local AI image generation tool"
 authors = ["oshtz"]
 license = "MIT"
@@ -13,23 +13,21 @@ name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.5.6", features = [] }
+tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
-tauri = { version = "2.10.3", features = ["protocol-asset", "image-ico"] }
+tauri = { version = "2.11.5", features = ["protocol-asset", "image-ico"] }
 tauri-plugin-log = "2"
 tauri-plugin-window-state = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
+sqlx = { version = "0.8", default-features = false, features = ["derive", "runtime-tokio", "sqlite"] }
 reqwest = { version = "0.12", features = ["json", "multipart", "stream"] }
 tokio = { version = "1", features = ["full"] }
 tokio-tungstenite = { version = "0.26", features = ["native-tls"] }
-nanoid = "0.4"
 thiserror = "2"
-dashmap = "6"
 base64 = "0.22"
 log = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
@@ -39,3 +37,4 @@ regex = "1"
 urlencoding = "2"
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 opener = "0.8.4"
+keyring = { version = "3.6.3", default-features = false, features = ["apple-native", "windows-native"] }

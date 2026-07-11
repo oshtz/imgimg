@@ -37,12 +37,12 @@ beforeEach(() => {
 });
 
 describe("listCanvases", () => {
-  it("returns empty array initially", () => {
+  it("returns empty array initially", async () => {
     const result = listCanvases();
     expect(result).toEqual([]);
   });
 
-  it("returns parsed array from localStorage", () => {
+  it("returns parsed array from localStorage", async () => {
     const canvases = [
       { id: "canvas_1", name: "My Canvas", createdAt: "2025-01-01T00:00:00.000Z" },
     ];
@@ -51,7 +51,7 @@ describe("listCanvases", () => {
     expect(result).toEqual(canvases);
   });
 
-  it("returns empty array on invalid JSON", () => {
+  it("returns empty array on invalid JSON", async () => {
     storage.set("imgimg.canvases", "not-json");
     const result = listCanvases();
     expect(result).toEqual([]);
@@ -59,60 +59,60 @@ describe("listCanvases", () => {
 });
 
 describe("createCanvas", () => {
-  it("returns meta with id, name, and createdAt", () => {
-    const meta = createCanvas("Test Canvas");
+  it("returns meta with id, name, and createdAt", async () => {
+    const meta = await createCanvas("Test Canvas");
     expect(meta).toHaveProperty("id");
     expect(meta).toHaveProperty("name", "Test Canvas");
     expect(meta).toHaveProperty("createdAt");
     expect(meta.id).toMatch(/^canvas_/);
   });
 
-  it("adds the canvas to localStorage index", () => {
-    createCanvas("First");
+  it("adds the canvas to localStorage index", async () => {
+    await createCanvas("First");
     const stored = JSON.parse(storage.get("imgimg.canvases") ?? "[]");
     expect(stored).toHaveLength(1);
     expect(stored[0].name).toBe("First");
   });
 
-  it("appends multiple canvases to the list", () => {
-    createCanvas("A");
-    createCanvas("B");
+  it("appends multiple canvases to the list", async () => {
+    await createCanvas("A");
+    await createCanvas("B");
     const stored = JSON.parse(storage.get("imgimg.canvases") ?? "[]");
     expect(stored).toHaveLength(2);
   });
 
-  it("generates unique ids for each canvas", () => {
-    const a = createCanvas("A");
-    const b = createCanvas("B");
+  it("generates unique ids for each canvas", async () => {
+    const a = await createCanvas("A");
+    const b = await createCanvas("B");
     expect(a.id).not.toBe(b.id);
   });
 
-  it("createdAt is a valid ISO string", () => {
-    const meta = createCanvas("Test");
+  it("createdAt is a valid ISO string", async () => {
+    const meta = await createCanvas("Test");
     const date = new Date(meta.createdAt);
     expect(date.toISOString()).toBe(meta.createdAt);
   });
 });
 
 describe("renameCanvas", () => {
-  it("updates name in localStorage", () => {
-    const meta = createCanvas("Original");
-    renameCanvas(meta.id, "Renamed");
+  it("updates name in localStorage", async () => {
+    const meta = await createCanvas("Original");
+    await renameCanvas(meta.id, "Renamed");
     const stored = JSON.parse(storage.get("imgimg.canvases") ?? "[]");
     expect(stored[0].name).toBe("Renamed");
   });
 
-  it("does nothing for non-existent id", () => {
-    createCanvas("Only");
-    renameCanvas("nonexistent", "Nope");
+  it("does nothing for non-existent id", async () => {
+    await createCanvas("Only");
+    await renameCanvas("nonexistent", "Nope");
     const stored = JSON.parse(storage.get("imgimg.canvases") ?? "[]");
     expect(stored[0].name).toBe("Only");
   });
 
-  it("only renames the targeted canvas", () => {
-    const a = createCanvas("A");
-    createCanvas("B");
-    renameCanvas(a.id, "A2");
+  it("only renames the targeted canvas", async () => {
+    const a = await createCanvas("A");
+    await createCanvas("B");
+    await renameCanvas(a.id, "A2");
     const stored = JSON.parse(storage.get("imgimg.canvases") ?? "[]");
     const names = stored.map((c: any) => c.name);
     expect(names).toContain("A2");
@@ -121,31 +121,31 @@ describe("renameCanvas", () => {
 });
 
 describe("deleteCanvas", () => {
-  it("removes canvas from list", () => {
-    const meta = createCanvas("Doomed");
-    deleteCanvas(meta.id);
+  it("removes canvas from list", async () => {
+    const meta = await createCanvas("Doomed");
+    await deleteCanvas(meta.id);
     const stored = JSON.parse(storage.get("imgimg.canvases") ?? "[]");
     expect(stored).toHaveLength(0);
   });
 
-  it("removes persisted canvas state", () => {
-    const meta = createCanvas("Doomed");
+  it("removes persisted canvas state", async () => {
+    const meta = await createCanvas("Doomed");
     storage.set(`imgimg.canvas.state.${meta.id}`, '{"nodes":[]}');
-    deleteCanvas(meta.id);
+    await deleteCanvas(meta.id);
     expect(storage.has(`imgimg.canvas.state.${meta.id}`)).toBe(false);
   });
 
-  it("removes viewport data for the canvas", () => {
-    const meta = createCanvas("Doomed");
+  it("removes viewport data for the canvas", async () => {
+    const meta = await createCanvas("Doomed");
     storage.set(`imgimg.canvas.viewport.${meta.id}`, '{"x":0}');
-    deleteCanvas(meta.id);
+    await deleteCanvas(meta.id);
     expect(storage.has(`imgimg.canvas.viewport.${meta.id}`)).toBe(false);
   });
 
-  it("does not affect other canvases", () => {
-    const a = createCanvas("A");
-    const b = createCanvas("B");
-    deleteCanvas(a.id);
+  it("does not affect other canvases", async () => {
+    const a = await createCanvas("A");
+    const b = await createCanvas("B");
+    await deleteCanvas(a.id);
     const stored = JSON.parse(storage.get("imgimg.canvases") ?? "[]");
     expect(stored).toHaveLength(1);
     expect(stored[0].id).toBe(b.id);
@@ -153,71 +153,72 @@ describe("deleteCanvas", () => {
 });
 
 describe("getCanvasLocalState", () => {
-  it("returns null when no state stored", () => {
+  it("returns null when no state stored", async () => {
     expect(getCanvasLocalState("canvas_xyz")).toBeNull();
   });
 
-  it("returns parsed state from localStorage", () => {
+  it("returns parsed state from localStorage", async () => {
     const state = { nodes: [{ id: "n1" }], nextZIndex: 5 };
     storage.set("imgimg.canvas.state.canvas_abc", JSON.stringify(state));
     const result = getCanvasLocalState("canvas_abc");
     expect(result).toEqual(state);
   });
 
-  it("returns null on invalid JSON", () => {
+  it("returns null on invalid JSON", async () => {
     storage.set("imgimg.canvas.state.canvas_bad", "{{bad");
     expect(getCanvasLocalState("canvas_bad")).toBeNull();
   });
 });
 
 describe("putCanvasLocalState", () => {
-  it("stores stringified state in localStorage", () => {
+  it("stores stringified state in localStorage", async () => {
     const state = { nodes: [], chatMessages: [], nextZIndex: 1 };
-    putCanvasLocalState("canvas_123", state);
+    await putCanvasLocalState("canvas_123", state);
     const raw = storage.get("imgimg.canvas.state.canvas_123");
     expect(raw).toBe(JSON.stringify(state));
   });
 
-  it("overwrites existing state", () => {
-    putCanvasLocalState("canvas_x", { nodes: [1] });
-    putCanvasLocalState("canvas_x", { nodes: [1, 2] });
+  it("overwrites existing state", async () => {
+    await putCanvasLocalState("canvas_x", { nodes: [1] });
+    await putCanvasLocalState("canvas_x", { nodes: [1, 2] });
     const parsed = JSON.parse(storage.get("imgimg.canvas.state.canvas_x")!);
     expect(parsed.nodes).toEqual([1, 2]);
   });
 
-  it("state can be read back with getCanvasLocalState", () => {
+  it("state can be read back with getCanvasLocalState", async () => {
     const state = { nodes: [{ id: "n1" }], nextZIndex: 10 };
-    putCanvasLocalState("canvas_rt", state);
+    await putCanvasLocalState("canvas_rt", state);
     expect(getCanvasLocalState("canvas_rt")).toEqual(state);
   });
 });
 
 describe("edge cases", () => {
-  it("createCanvas generates IDs with canvas_ prefix and random suffix", () => {
-    const ids = Array.from({ length: 5 }, (_, i) => createCanvas(`c${i}`).id);
+  it("createCanvas generates IDs with canvas_ prefix and random suffix", async () => {
+    const canvases = await Promise.all(Array.from({ length: 5 }, (_, i) => createCanvas(`c${i}`)));
+    const ids = canvases.map((canvas) => canvas.id);
     const allUnique = new Set(ids).size === ids.length;
     expect(allUnique).toBe(true);
     ids.forEach((id) => expect(id).toMatch(/^canvas_\d+_[a-z0-9]+$/));
   });
 
-  it("listCanvases returns empty array when index is empty string", () => {
+  it("listCanvases returns empty array when index is empty string", async () => {
     storage.set("imgimg.canvases", "");
     expect(listCanvases()).toEqual([]);
   });
 
-  it("multiple canvases are tracked independently", () => {
-    const a = createCanvas("A");
-    const b = createCanvas("B");
-    const c = createCanvas("C");
-    putCanvasLocalState(a.id, { nodes: [1] });
-    putCanvasLocalState(b.id, { nodes: [2] });
-    putCanvasLocalState(c.id, { nodes: [3] });
+  it("multiple canvases are tracked independently", async () => {
+    const a = await createCanvas("A");
+    const b = await createCanvas("B");
+    const c = await createCanvas("C");
+    await putCanvasLocalState(a.id, { nodes: [1] });
+    await putCanvasLocalState(b.id, { nodes: [2] });
+    await putCanvasLocalState(c.id, { nodes: [3] });
 
     expect(getCanvasLocalState(a.id)).toEqual({ nodes: [1] });
     expect(getCanvasLocalState(b.id)).toEqual({ nodes: [2] });
     expect(getCanvasLocalState(c.id)).toEqual({ nodes: [3] });
 
-    deleteCanvas(b.id);
+    await deleteCanvas(b.id);
     expect(getCanvasLocalState(b.id)).toBeNull();
     expect(getCanvasLocalState(a.id)).toEqual({ nodes: [1] });
     expect(getCanvasLocalState(c.id)).toEqual({ nodes: [3] });
@@ -227,15 +228,15 @@ describe("edge cases", () => {
     expect(remaining.map((r) => r.id)).toEqual([a.id, c.id]);
   });
 
-  it("renameCanvas preserves other fields like createdAt", () => {
-    const meta = createCanvas("Original");
-    renameCanvas(meta.id, "NewName");
+  it("renameCanvas preserves other fields like createdAt", async () => {
+    const meta = await createCanvas("Original");
+    await renameCanvas(meta.id, "NewName");
     const stored = JSON.parse(storage.get("imgimg.canvases") ?? "[]");
     expect(stored[0].createdAt).toBe(meta.createdAt);
     expect(stored[0].id).toBe(meta.id);
   });
 
-  it("getCanvasLocalState handles objects with nested data", () => {
+  it("getCanvasLocalState handles objects with nested data", async () => {
     const complexState = {
       nodes: [{ id: "n1", data: { label: "Node 1", children: [1, 2, 3] } }],
       chatMessages: [{ role: "user", content: "hello" }],
@@ -247,22 +248,22 @@ describe("edge cases", () => {
     expect(result).toEqual(complexState);
   });
 
-  it("getCanvasLocalState handles arrays as state", () => {
+  it("getCanvasLocalState handles arrays as state", async () => {
     const arrayState = [1, 2, 3];
     storage.set("imgimg.canvas.state.canvas_arr", JSON.stringify(arrayState));
     const result = getCanvasLocalState("canvas_arr");
     expect(result).toEqual(arrayState);
   });
 
-  it("putCanvasLocalState overwrites existing state completely", () => {
-    putCanvasLocalState("canvas_ow", { nodes: [1, 2, 3], extra: "field" });
-    putCanvasLocalState("canvas_ow", { nodes: [4] });
+  it("putCanvasLocalState overwrites existing state completely", async () => {
+    await putCanvasLocalState("canvas_ow", { nodes: [1, 2, 3], extra: "field" });
+    await putCanvasLocalState("canvas_ow", { nodes: [4] });
     const result = getCanvasLocalState("canvas_ow") as any;
     expect(result.nodes).toEqual([4]);
     expect(result.extra).toBeUndefined();
   });
 
-  it("putCanvasLocalState silently handles storage full (setItem throws)", () => {
+  it("putCanvasLocalState silently handles storage full (setItem throws)", async () => {
     // Replace setItem temporarily to throw
     const origSetItem = localStorage.setItem;
     const throwingSetItem = (_key: string, _value: string) => {
@@ -271,15 +272,15 @@ describe("edge cases", () => {
     (localStorage as any).setItem = throwingSetItem;
 
     // Should not throw
-    expect(() => putCanvasLocalState("canvas_full", { nodes: [] })).not.toThrow();
+    await expect(putCanvasLocalState("canvas_full", { nodes: [] })).resolves.toBeUndefined();
 
     // Restore
     (localStorage as any).setItem = origSetItem;
   });
 
-  it("renameCanvas is a no-op for missing canvas id", () => {
+  it("renameCanvas is a no-op for missing canvas id", async () => {
     // No canvases created — renaming should not throw or create entries
-    renameCanvas("nonexistent_id", "NewName");
+    await renameCanvas("nonexistent_id", "NewName");
     const stored = JSON.parse(storage.get("imgimg.canvases") ?? "[]");
     expect(stored).toEqual([]);
   });
@@ -315,7 +316,7 @@ describe("Tauri mode", () => {
     _isTauriFlag.value = false;
   });
 
-  it("listCanvases returns cached canvases in Tauri mode", () => {
+  it("listCanvases returns cached canvases in Tauri mode", async () => {
     const result = listCanvases();
     // Returns empty cached array by default (no async fetch yet)
     expect(Array.isArray(result)).toBe(true);
@@ -341,7 +342,7 @@ describe("Tauri mode", () => {
     expect(result).toEqual(state);
   });
 
-  it("putCanvasLocalState calls tauriApi.saveCanvasState in Tauri mode", () => {
+  it("putCanvasLocalState calls tauriApi.saveCanvasState in Tauri mode", async () => {
     const state = {
       nodes: [{ id: "n1" }],
       chatMessages: [{ text: "hi" }],
@@ -352,7 +353,7 @@ describe("Tauri mode", () => {
       selectedProviderModelId: "pm-1",
       activeEngine: "comfyui",
     };
-    putCanvasLocalState("canvas_t1", state);
+    await putCanvasLocalState("canvas_t1", state);
     expect(tauriMock.saveCanvasState).toHaveBeenCalledWith({
       gameId: "canvas_t1",
       nodes: [{ id: "n1" }],
@@ -366,8 +367,8 @@ describe("Tauri mode", () => {
     });
   });
 
-  it("putCanvasLocalState defaults missing fields", () => {
-    putCanvasLocalState("canvas_t2", {});
+  it("putCanvasLocalState defaults missing fields", async () => {
+    await putCanvasLocalState("canvas_t2", {});
     expect(tauriMock.saveCanvasState).toHaveBeenCalledWith({
       gameId: "canvas_t2",
       nodes: [],
@@ -381,26 +382,26 @@ describe("Tauri mode", () => {
     });
   });
 
-  it("createCanvas calls tauriApi.createCanvas", () => {
-    vi.mocked(tauriMock.createCanvas).mockResolvedValue({
-      id: "canvas_srv",
-      name: "Tauri Canvas",
+  it("createCanvas calls tauriApi.createCanvas", async () => {
+    vi.mocked(tauriMock.createCanvas).mockImplementation(async (id, name) => ({
+      id,
+      name,
       createdAt: "2025-01-01",
-    } as any);
+    } as any));
 
-    const meta = createCanvas("Tauri Canvas");
+    const meta = await createCanvas("Tauri Canvas");
     expect(meta.name).toBe("Tauri Canvas");
     expect(meta.id).toMatch(/^canvas_/);
     expect(tauriMock.createCanvas).toHaveBeenCalledWith(meta.id, "Tauri Canvas");
   });
 
-  it("renameCanvas calls tauriApi.renameCanvas", () => {
-    renameCanvas("c1", "New Name");
+  it("renameCanvas calls tauriApi.renameCanvas", async () => {
+    await renameCanvas("c1", "New Name");
     expect(tauriMock.renameCanvas).toHaveBeenCalledWith("c1", "New Name");
   });
 
-  it("deleteCanvas calls tauriApi.deleteCanvas", () => {
-    deleteCanvas("c1");
+  it("deleteCanvas calls tauriApi.deleteCanvas", async () => {
+    await deleteCanvas("c1");
     expect(tauriMock.deleteCanvas).toHaveBeenCalledWith("c1");
   });
 });

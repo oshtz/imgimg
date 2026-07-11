@@ -6,8 +6,8 @@ use crate::config::AppConfig;
 use crate::db::models::Asset;
 use crate::error::{AppError, AppResult};
 use crate::providers::common::{
-    bearer_headers, detect_image_format, download_bytes,
-    extension_from_content_type,
+    bearer_headers, detect_image_format, download_asset, download_bytes,
+    extension_from_content_type, MAX_PROVIDER_ASSET_BYTES,
 };
 use crate::services::storage::LocalStorage;
 
@@ -32,8 +32,11 @@ pub struct ImageGenParams {
 /// Returns true for models that only output images (no text).
 fn is_image_only_model(model: &str) -> bool {
     let m = model.to_lowercase();
-    m.contains("flux") || m.contains("sourceful") || m.contains("dall-e")
-        || m.contains("stable-diffusion") || m.contains("midjourney")
+    m.contains("flux")
+        || m.contains("sourceful")
+        || m.contains("dall-e")
+        || m.contains("stable-diffusion")
+        || m.contains("midjourney")
 }
 
 /// Generate a single image via OpenRouter and store it.
@@ -130,7 +133,11 @@ pub(crate) async fn generate_single_image(
         }
     }
 
-    log::info!("OpenRouter image request: model={}, modalities={}", model, body["modalities"]);
+    log::info!(
+        "OpenRouter image request: model={}, modalities={}",
+        model,
+        body["modalities"]
+    );
 
     let resp = client
         .post(&url)
@@ -151,11 +158,18 @@ pub(crate) async fn generate_single_image(
                 if let Some(raw) = v["error"]["metadata"]["raw"].as_str() {
                     if let Ok(inner) = serde_json::from_str::<serde_json::Value>(raw) {
                         if let Some(status) = inner["status"].as_str() {
-                            let details = inner["details"].as_object()
+                            let details = inner["details"]
+                                .as_object()
                                 .map(|d| format!("{:?}", d))
                                 .unwrap_or_default();
-                            return Some(format!("{}{}", status,
-                                if details.is_empty() { String::new() } else { format!(": {}", details) }
+                            return Some(format!(
+                                "{}{}",
+                                status,
+                                if details.is_empty() {
+                                    String::new()
+                                } else {
+                                    format!(": {}", details)
+                                }
                             ));
                         }
                     }
@@ -192,21 +206,43 @@ pub(crate) async fn generate_single_image(
             // Log first 500 chars of content for debugging
             let content_preview = msg["content"].to_string();
             let preview_len = content_preview.len().min(500);
-            log::info!("OpenRouter content preview: {}", &content_preview[..preview_len]);
+            log::info!(
+                "OpenRouter content preview: {}",
+                &content_preview[..preview_len]
+            );
         }
     }
 
     let image_urls = extract_image_urls(&data);
 
-    let image_url = image_urls
-        .first()
-        .ok_or_else(|| {
-            log::warn!("OpenRouter: No images extracted. Full response: {}", data);
-            AppError::ProviderError("No image in OpenRouter response".into())
-        })?;
+    let image_url = image_urls.first().ok_or_else(|| {
+        log::warn!("OpenRouter: No images extracted. Full response: {}", data);
+        AppError::ProviderError("No image in OpenRouter response".into())
+    })?;
 
-    // Resolve image data
+    if image_url.starts_with("http://") || image_url.starts_with("https://") {
+        return download_asset(
+            client,
+            storage,
+            image_url,
+            None,
+            30_000,
+            generation_id,
+            "image",
+            item_index,
+            filename,
+        )
+        .await;
+    }
+
+    // Resolve inline image data.
     let (bytes, ext) = resolve_image_data(client, image_url).await?;
+    if bytes.len() as u64 > MAX_PROVIDER_ASSET_BYTES {
+        return Err(AppError::ProviderError(format!(
+            "Provider asset exceeds the {} MiB download limit",
+            MAX_PROVIDER_ASSET_BYTES / (1024 * 1024)
+        )));
+    }
 
     let final_filename = if filename.ends_with(".png") || filename.ends_with(".jpg") {
         let base = &filename[..filename.len() - 4];
@@ -292,8 +328,7 @@ pub(crate) async fn resolve_image_data(
 
     if url.starts_with("http://") || url.starts_with("https://") {
         let (bytes, ct) = download_bytes(client, url, None, 30_000).await?;
-        let ext = detect_image_format(&bytes)
-            .unwrap_or_else(|| extension_from_content_type(&ct));
+        let ext = detect_image_format(&bytes).unwrap_or_else(|| extension_from_content_type(&ct));
         return Ok((bytes, ext));
     }
 
@@ -332,8 +367,11 @@ fn extract_urls_from_text(text: &str, urls: &mut Vec<String>) {
     // Look for data:image URLs
     for part in text.split("data:image/") {
         if part.contains(";base64,") {
-            let data_url = format!("data:image/{}", part.split_whitespace().next().unwrap_or(part));
-            let cleaned = data_url.trim_end_matches(|c: char| c == ')' || c == '"' || c == '\'' || c == ']');
+            let data_url = format!(
+                "data:image/{}",
+                part.split_whitespace().next().unwrap_or(part)
+            );
+            let cleaned = data_url.trim_end_matches([')', '"', '\'', ']']);
             urls.push(cleaned.to_string());
         }
     }
@@ -341,7 +379,7 @@ fn extract_urls_from_text(text: &str, urls: &mut Vec<String>) {
     // Look for HTTPS image URLs
     for part in text.split("https://") {
         let url = format!("https://{}", part.split_whitespace().next().unwrap_or(part));
-        let cleaned = url.trim_end_matches(|c: char| c == ')' || c == '"' || c == '\'' || c == ']');
+        let cleaned = url.trim_end_matches([')', '"', '\'', ']']);
         if looks_like_image_url(cleaned) {
             urls.push(cleaned.to_string());
         }

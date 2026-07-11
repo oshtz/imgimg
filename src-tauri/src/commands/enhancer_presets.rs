@@ -26,17 +26,11 @@ pub async fn upsert_enhancer_preset(
 }
 
 #[tauri::command]
-pub async fn delete_enhancer_preset(
-    state: State<'_, AppState>,
-    id: String,
-) -> AppResult<()> {
+pub async fn delete_enhancer_preset(state: State<'_, AppState>, id: String) -> AppResult<()> {
     enhancer_presets::delete_preset(&state.db, &id).await
 }
 
 #[tauri::command]
-pub async fn set_active_enhancer_preset(
-    state: State<'_, AppState>,
-    id: String,
-) -> AppResult<()> {
+pub async fn set_active_enhancer_preset(state: State<'_, AppState>, id: String) -> AppResult<()> {
     enhancer_presets::set_active_preset(&state.db, &id).await
 }

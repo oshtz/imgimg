@@ -32,7 +32,7 @@ export function InlineTextEditor({ editingNodeId, node, viewport, dispatch, onCl
           width: screenW,
           height: screenH,
           fontSize: `${(isFrame ? 13 : 14) * viewport.scale}px`,
-          fontFamily: "'Azeret Mono'",
+          fontFamily: "'Azeret Mono Variable'",
           fontWeight: isFrame ? "bold" : "normal",
           color: textColor,
           caretColor: textColor,

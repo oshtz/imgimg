@@ -39,7 +39,7 @@ import {
   setActiveAssetVersion,
   regenerateItem,
   createInpaint,
-  downloadGenerationAssetsZip,
+  exportGenerationAssetsZip,
   removeBackground,
   listGallery,
   listGalleryUsers,
@@ -59,14 +59,7 @@ import {
   getFeatureWorkflowConfig,
   getDefaultSystemPrompts,
   updateAdminSettings,
-  getOpenrouterApiKey,
-  setOpenrouterApiKey,
-  getReplicateApiKey,
-  setReplicateApiKey,
-  getFalApiKey,
-  setFalApiKey,
-  getKieApiKey,
-  setKieApiKey,
+  verifyProviderCredential,
   listAvailableLoras,
   getLoraSettings,
   updateLoraSettings,
@@ -93,13 +86,9 @@ import {
   streamEnhancedPrompt,
   exploreVariants,
   getStorageBasePath,
-  getStorageFile,
   openStorageFolder,
   openExternalUrl,
-  uploadToStorage,
   getAppInfo,
-  checkPortableUpdate,
-  installPortableUpdate,
   getCompareModels,
   getCompareGroups,
 } from "../tauri-api";
@@ -357,11 +346,12 @@ describe("Generations", () => {
     expect(result).toEqual({ id: "asset1" });
   });
 
-  it("downloadGenerationAssetsZip calls download_generation_assets_zip", async () => {
-    mockInvoke.mockResolvedValue([1, 2, 3]);
-    const result = await downloadGenerationAssetsZip("g1");
-    expect(mockInvoke).toHaveBeenCalledWith("download_generation_assets_zip", { generationId: "g1" });
-    expect(result).toEqual([1, 2, 3]);
+  it("exportGenerationAssetsZip exports directly to the selected path", async () => {
+    await exportGenerationAssetsZip("g1", "C:/exports/g1.zip");
+    expect(mockInvoke).toHaveBeenCalledWith("export_generation_assets_zip", {
+      generationId: "g1",
+      destination: "C:/exports/g1.zip",
+    });
   });
 
   it("removeBackground calls remove_background", async () => {
@@ -519,62 +509,14 @@ describe("Admin Settings", () => {
     expect(mockInvoke).toHaveBeenCalledWith("update_admin_settings", { settings });
   });
 
-  it("getOpenrouterApiKey calls get_openrouter_api_key", async () => {
-    mockInvoke.mockResolvedValue("sk-or-xxx");
-    const result = await getOpenrouterApiKey();
-    expect(mockInvoke).toHaveBeenCalledWith("get_openrouter_api_key");
-    expect(result).toBe("sk-or-xxx");
-  });
-
-  it("setOpenrouterApiKey calls set_openrouter_api_key with value", async () => {
-    mockInvoke.mockResolvedValue(undefined);
-    await setOpenrouterApiKey("sk-or-xxx");
-    expect(mockInvoke).toHaveBeenCalledWith("set_openrouter_api_key", { value: "sk-or-xxx" });
-  });
-
-  it("setOpenrouterApiKey accepts null", async () => {
-    mockInvoke.mockResolvedValue(undefined);
-    await setOpenrouterApiKey(null);
-    expect(mockInvoke).toHaveBeenCalledWith("set_openrouter_api_key", { value: null });
-  });
-
-  it("getReplicateApiKey calls get_replicate_api_key", async () => {
-    mockInvoke.mockResolvedValue("r8_xxx");
-    const result = await getReplicateApiKey();
-    expect(mockInvoke).toHaveBeenCalledWith("get_replicate_api_key");
-    expect(result).toBe("r8_xxx");
-  });
-
-  it("setReplicateApiKey calls set_replicate_api_key", async () => {
-    mockInvoke.mockResolvedValue(undefined);
-    await setReplicateApiKey("r8_xxx");
-    expect(mockInvoke).toHaveBeenCalledWith("set_replicate_api_key", { value: "r8_xxx" });
-  });
-
-  it("getFalApiKey calls get_fal_api_key", async () => {
-    mockInvoke.mockResolvedValue("fal-xxx");
-    const result = await getFalApiKey();
-    expect(mockInvoke).toHaveBeenCalledWith("get_fal_api_key");
-    expect(result).toBe("fal-xxx");
-  });
-
-  it("setFalApiKey calls set_fal_api_key", async () => {
-    mockInvoke.mockResolvedValue(undefined);
-    await setFalApiKey("fal-xxx");
-    expect(mockInvoke).toHaveBeenCalledWith("set_fal_api_key", { value: "fal-xxx" });
-  });
-
-  it("getKieApiKey calls get_kie_api_key", async () => {
-    mockInvoke.mockResolvedValue("kie-xxx");
-    const result = await getKieApiKey();
-    expect(mockInvoke).toHaveBeenCalledWith("get_kie_api_key");
-    expect(result).toBe("kie-xxx");
-  });
-
-  it("setKieApiKey calls set_kie_api_key", async () => {
-    mockInvoke.mockResolvedValue(undefined);
-    await setKieApiKey("kie-xxx");
-    expect(mockInvoke).toHaveBeenCalledWith("set_kie_api_key", { value: "kie-xxx" });
+  it("verifyProviderCredential sends only the candidate under verification", async () => {
+    mockInvoke.mockResolvedValue({ state: "verified", message: null });
+    const result = await verifyProviderCredential("openrouter", "sk-or-xxx");
+    expect(mockInvoke).toHaveBeenCalledWith("verify_provider_credential", {
+      provider: "openrouter",
+      candidate: "sk-or-xxx",
+    });
+    expect(result.state).toBe("verified");
   });
 });
 
@@ -877,13 +819,6 @@ describe("Storage", () => {
     expect(result).toBe("/home/user/.imgimg");
   });
 
-  it("getStorageFile calls get_storage_file with url", async () => {
-    mockInvoke.mockResolvedValue([255, 216, 255]);
-    const result = await getStorageFile("/images/test.png");
-    expect(mockInvoke).toHaveBeenCalledWith("get_storage_file", { url: "/images/test.png" });
-    expect(result).toEqual([255, 216, 255]);
-  });
-
   it("openStorageFolder calls open_storage_folder", async () => {
     mockInvoke.mockResolvedValue(undefined);
     await openStorageFolder();
@@ -896,16 +831,6 @@ describe("Storage", () => {
     expect(mockInvoke).toHaveBeenCalledWith("open_external_url", { url: "https://example.com" });
   });
 
-  it("uploadToStorage calls upload_to_storage with all args", async () => {
-    mockInvoke.mockResolvedValue("/uploads/file.png");
-    const result = await uploadToStorage("g1", "file.png", [1, 2, 3]);
-    expect(mockInvoke).toHaveBeenCalledWith("upload_to_storage", {
-      generationId: "g1",
-      filename: "file.png",
-      data: [1, 2, 3],
-    });
-    expect(result).toBe("/uploads/file.png");
-  });
 });
 
 describe("App metadata", () => {
@@ -921,36 +846,6 @@ describe("App metadata", () => {
 });
 
 // ──────────── Portable updater ────────────
-
-describe("Portable updater", () => {
-  it("checkPortableUpdate calls check_portable_update", async () => {
-    const data = {
-      currentVersion: "0.1.0",
-      latestVersion: "0.2.0",
-      updateAvailable: true,
-      releaseUrl: "https://github.com/oshtz/imgimg/releases/tag/v0.2.0",
-      assetName: "imgimg-Portable.exe",
-      downloadUrl: "https://github.com/oshtz/imgimg/releases/download/v0.2.0/imgimg-Portable.exe",
-      body: "release notes",
-    };
-    mockInvoke.mockResolvedValue(data);
-
-    const result = await checkPortableUpdate();
-
-    expect(mockInvoke).toHaveBeenCalledWith("check_portable_update");
-    expect(result).toEqual(data);
-  });
-
-  it("installPortableUpdate passes the portable exe download URL", async () => {
-    mockInvoke.mockResolvedValue(undefined);
-
-    await installPortableUpdate("https://github.com/oshtz/imgimg/releases/download/v0.2.0/imgimg-Portable.exe");
-
-    expect(mockInvoke).toHaveBeenCalledWith("install_portable_update", {
-      downloadUrl: "https://github.com/oshtz/imgimg/releases/download/v0.2.0/imgimg-Portable.exe",
-    });
-  });
-});
 
 // ──────────── Compare ────────────
 

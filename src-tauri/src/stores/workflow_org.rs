@@ -79,15 +79,13 @@ pub async fn create_folder(
             .await?;
     let sort_order = max_row.0.unwrap_or(-1) + 1;
 
-    sqlx::query(
-        "INSERT INTO workflow_folders (id, user_id, name, sort_order) VALUES (?, ?, ?, ?)",
-    )
-    .bind(id)
-    .bind(user_id)
-    .bind(name)
-    .bind(sort_order)
-    .execute(pool)
-    .await?;
+    sqlx::query("INSERT INTO workflow_folders (id, user_id, name, sort_order) VALUES (?, ?, ?, ?)")
+        .bind(id)
+        .bind(user_id)
+        .bind(name)
+        .bind(sort_order)
+        .execute(pool)
+        .await?;
 
     Ok(WorkflowFolder {
         id: id.to_string(),

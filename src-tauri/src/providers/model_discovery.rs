@@ -40,10 +40,7 @@ pub async fn search_replicate_models(
     let data: serde_json::Value =
         get_json(client, &url, Some(bearer_headers(api_key)?), 10_000).await?;
 
-    let results = data["models"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default();
+    let results = data["models"].as_array().cloned().unwrap_or_default();
 
     let query_lower = query.map(|q| q.to_lowercase());
 
@@ -107,9 +104,11 @@ pub async fn get_replicate_model_parameters(
 
     let model = model?;
     let readme: Option<String> = readme_res.ok().and_then(|v: serde_json::Value| {
-        v.get("content").and_then(|c: &serde_json::Value| c.as_str().map(|s: &str| s.to_string()))
+        v.get("content")
+            .and_then(|c: &serde_json::Value| c.as_str().map(|s: &str| s.to_string()))
     });
-    let description = model.get("description")
+    let description = model
+        .get("description")
         .and_then(|d| d.as_str().map(|s| s.to_string()));
 
     let schemas = model
@@ -156,10 +155,7 @@ pub async fn search_fal_models(
     let data: serde_json::Value =
         get_json(client, &url, Some(key_headers(api_key)?), 10_000).await?;
 
-    let results = data["models"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default();
+    let results = data["models"].as_array().cloned().unwrap_or_default();
 
     let models: Vec<DiscoveredModel> = results
         .iter()
@@ -208,8 +204,7 @@ pub async fn get_fal_model_parameters(
         .get("paths")
         .and_then(|p| {
             // Try the first path entry
-            p.as_object()
-                .and_then(|obj| obj.values().next())
+            p.as_object().and_then(|obj| obj.values().next())
         })
         .and_then(|path| path.get("post"))
         .and_then(|post| post.get("requestBody"))
@@ -224,8 +219,14 @@ pub async fn get_fal_model_parameters(
         .and_then(|c| c.get("schemas"))
         .cloned();
 
-    let info = openapi.get("info").cloned().unwrap_or(serde_json::json!({}));
-    let description = info.get("description").and_then(|d| d.as_str()).map(|s| s.to_string());
+    let info = openapi
+        .get("info")
+        .cloned()
+        .unwrap_or(serde_json::json!({}));
+    let description = info
+        .get("description")
+        .and_then(|d| d.as_str())
+        .map(|s| s.to_string());
 
     let mut result = serde_json::json!({
         "input": input_schema,
@@ -254,10 +255,7 @@ pub async fn search_openrouter_models(
 
     let data: serde_json::Value = get_json(client, &url, Some(headers), 15_000).await?;
 
-    let results = data["data"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default();
+    let results = data["data"].as_array().cloned().unwrap_or_default();
 
     let limit = limit.unwrap_or(25).min(100);
     let query_lower = query.map(|q| q.to_lowercase());

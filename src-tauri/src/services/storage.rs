@@ -1,6 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use sqlx::SqlitePool;
+use tokio::io::AsyncWriteExt;
 
 use crate::db::models::Asset;
 use crate::error::{AppError, AppResult};
@@ -33,13 +34,13 @@ impl LocalStorage {
         filename: &str,
         bytes: &[u8],
     ) -> AppResult<Asset> {
-        let key = self.build_key(generation_id, filename);
+        let key = self.build_key(generation_id, &immutable_asset_filename(filename));
         let file_path = self.resolve_path(&key)?;
 
         if let Some(parent) = file_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
-        tokio::fs::write(&file_path, bytes).await?;
+        self.write_atomic(&file_path, bytes).await?;
 
         Ok(self.build_asset(generation_id, asset_type, item_index, &key))
     }
@@ -53,13 +54,70 @@ impl LocalStorage {
         filename: &str,
         source_path: &Path,
     ) -> AppResult<Asset> {
-        let key = self.build_key(generation_id, filename);
+        let key = self.build_key(generation_id, &immutable_asset_filename(filename));
         let file_path = self.resolve_path(&key)?;
 
         if let Some(parent) = file_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
-        tokio::fs::copy(source_path, &file_path).await?;
+        let part_path = file_path.with_extension("part");
+        tokio::fs::copy(source_path, &part_path).await?;
+        if let Err(error) = tokio::fs::rename(&part_path, &file_path).await {
+            let _ = tokio::fs::remove_file(&part_path).await;
+            return Err(error.into());
+        }
+
+        Ok(self.build_asset(generation_id, asset_type, item_index, &key))
+    }
+
+    /// Stream an HTTP response into a temporary file, then atomically publish it.
+    pub async fn write_response_asset(
+        &self,
+        generation_id: &str,
+        asset_type: &str,
+        item_index: Option<i64>,
+        filename: &str,
+        response: reqwest::Response,
+        max_bytes: u64,
+    ) -> AppResult<Asset> {
+        use futures::StreamExt;
+
+        if response
+            .content_length()
+            .is_some_and(|length| length > max_bytes)
+        {
+            return Err(AppError::ProviderError(format!(
+                "Provider asset exceeds the {} MiB download limit",
+                max_bytes / (1024 * 1024)
+            )));
+        }
+
+        let key = self.build_key(generation_id, &immutable_asset_filename(filename));
+        let file_path = self.resolve_path(&key)?;
+        let part_path = file_path.with_extension("part");
+        let mut file = tokio::fs::File::create(&part_path).await?;
+        let mut stream = response.bytes_stream();
+        let mut written = 0u64;
+
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk?;
+            written = written.saturating_add(chunk.len() as u64);
+            if written > max_bytes {
+                drop(file);
+                let _ = tokio::fs::remove_file(&part_path).await;
+                return Err(AppError::ProviderError(format!(
+                    "Provider asset exceeds the {} MiB download limit",
+                    max_bytes / (1024 * 1024)
+                )));
+            }
+            file.write_all(&chunk).await?;
+        }
+        file.flush().await?;
+        drop(file);
+        if let Err(error) = tokio::fs::rename(&part_path, &file_path).await {
+            let _ = tokio::fs::remove_file(&part_path).await;
+            return Err(error.into());
+        }
 
         Ok(self.build_asset(generation_id, asset_type, item_index, &key))
     }
@@ -123,20 +181,42 @@ impl LocalStorage {
         format!("{}_{}", generation_id, filename)
     }
 
+    async fn write_atomic(&self, file_path: &Path, bytes: &[u8]) -> AppResult<()> {
+        let part_path = file_path.with_extension("part");
+        tokio::fs::write(&part_path, bytes).await?;
+        if let Err(error) = tokio::fs::rename(&part_path, file_path).await {
+            let _ = tokio::fs::remove_file(&part_path).await;
+            return Err(error.into());
+        }
+        Ok(())
+    }
+
     fn resolve_path(&self, key: &str) -> AppResult<PathBuf> {
-        let resolved = self.base_dir.join(key);
-        // Path traversal check
-        let base = self.base_dir.canonicalize().unwrap_or_else(|_| self.base_dir.clone());
-        // For new files that don't exist yet, check the parent
-        let check_path = if resolved.exists() {
-            resolved.canonicalize().unwrap_or_else(|_| resolved.clone())
-        } else {
-            resolved.clone()
-        };
-        if !check_path.starts_with(&base) && !resolved.starts_with(&self.base_dir) {
+        if key.contains('/') || key.contains('\\') {
             return Err(AppError::BadRequest(
-                "Storage path resolves outside base dir".into(),
+                "Storage key must be a single file name".into(),
             ));
+        }
+        let path = Path::new(key);
+        let mut components = path.components();
+        if !matches!(components.next(), Some(Component::Normal(_))) || components.next().is_some() {
+            return Err(AppError::BadRequest(
+                "Storage key must be a single file name".into(),
+            ));
+        }
+
+        let base = self
+            .base_dir
+            .canonicalize()
+            .unwrap_or_else(|_| self.base_dir.clone());
+        let resolved = base.join(path);
+        if resolved.exists() {
+            let canonical = resolved.canonicalize()?;
+            if !canonical.starts_with(&base) {
+                return Err(AppError::BadRequest(
+                    "Storage path resolves outside base dir".into(),
+                ));
+            }
         }
         Ok(resolved)
     }
@@ -149,11 +229,7 @@ impl LocalStorage {
 
     fn url_to_key(&self, url: &str) -> Option<String> {
         let prefix = "/storage/";
-        if url.starts_with(prefix) {
-            Some(url[prefix.len()..].to_string())
-        } else {
-            None
-        }
+        url.strip_prefix(prefix).map(str::to_string)
     }
 
     fn build_asset(
@@ -173,6 +249,59 @@ impl LocalStorage {
             is_active: true,
             prompt: None,
         }
+    }
+}
+
+fn immutable_asset_filename(requested: &str) -> String {
+    let extension = Path::new(requested)
+        .extension()
+        .and_then(|value| value.to_str())
+        .filter(|value| !value.is_empty() && value.len() <= 10)
+        .filter(|value| {
+            value
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric())
+        })
+        .unwrap_or("bin")
+        .to_ascii_lowercase();
+    format!("asset_{}.{}", uuid::Uuid::new_v4(), extension)
+}
+
+#[allow(clippy::items_after_test_module)]
+#[cfg(test)]
+mod path_tests {
+    use super::{immutable_asset_filename, LocalStorage};
+    use std::path::PathBuf;
+
+    #[test]
+    fn storage_keys_cannot_escape_the_storage_directory() {
+        let storage = LocalStorage::new(PathBuf::from("storage"));
+
+        assert!(storage.resolve_path("generation_image.png").is_ok());
+        for key in [
+            "../imgimg.db",
+            "..\\imgimg.db",
+            "/tmp/file",
+            "nested/file.png",
+            "nested\\file.png",
+            ".",
+            "",
+        ] {
+            assert!(
+                storage.resolve_path(key).is_err(),
+                "accepted unsafe key: {key}"
+            );
+        }
+    }
+
+    #[test]
+    fn persisted_asset_names_are_immutable_and_keep_safe_extensions() {
+        let first = immutable_asset_filename("item_0.PNG");
+        let second = immutable_asset_filename("item_0.PNG");
+        assert_ne!(first, second);
+        assert!(first.starts_with("asset_"));
+        assert!(first.ends_with(".png"));
+        assert!(immutable_asset_filename("bad.exe/../name").ends_with(".bin"));
     }
 }
 
@@ -217,14 +346,12 @@ pub async fn migrate_to_flat_storage(pool: &SqlitePool, storage_dir: &Path) -> A
         // Update asset URLs in the database: /storage/<gen_id>/X -> /storage/<gen_id>_X
         let old_prefix = format!("/storage/{}/", dir_name);
         let new_prefix = format!("/storage/{}_", dir_name);
-        sqlx::query(
-            "UPDATE assets SET url = REPLACE(url, ?1, ?2) WHERE url LIKE ?3",
-        )
-        .bind(&old_prefix)
-        .bind(&new_prefix)
-        .bind(format!("{}%", old_prefix))
-        .execute(pool)
-        .await?;
+        sqlx::query("UPDATE assets SET url = REPLACE(url, ?1, ?2) WHERE url LIKE ?3")
+            .bind(&old_prefix)
+            .bind(&new_prefix)
+            .bind(format!("{}%", old_prefix))
+            .execute(pool)
+            .await?;
 
         // Remove the now-empty subdirectory
         let _ = tokio::fs::remove_dir(&path).await;
@@ -271,18 +398,16 @@ async fn storage_subdir_has_generation(pool: &SqlitePool, dir_name: &str) -> App
 
 /// Rewrite old-format `/storage/<id>/<file>` URLs to `/storage/<id>_<file>` in canvas_states JSON.
 async fn fix_canvas_state_urls(pool: &SqlitePool) -> AppResult<()> {
-    let rows: Vec<(String, String)> = sqlx::query_as(
-        "SELECT game_id, nodes FROM canvas_states WHERE nodes LIKE '%/storage/%/%'",
-    )
-    .fetch_all(pool)
-    .await?;
+    let rows: Vec<(String, String)> =
+        sqlx::query_as("SELECT game_id, nodes FROM canvas_states WHERE nodes LIKE '%/storage/%/%'")
+            .fetch_all(pool)
+            .await?;
 
     if rows.is_empty() {
         return Ok(());
     }
 
-    let re = regex::Regex::new(r#"/storage/(gen_[a-f0-9\-]+)/([^"]+)"#)
-        .expect("valid regex");
+    let re = regex::Regex::new(r#"/storage/(gen_[a-f0-9\-]+)/([^"]+)"#).expect("valid regex");
 
     let mut fixed_count = 0u32;
     for (game_id, nodes_json) in &rows {

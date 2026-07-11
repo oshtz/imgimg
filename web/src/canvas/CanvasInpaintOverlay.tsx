@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TbBrush, TbEraser, TbArrowBackUp, TbX, TbSend } from "react-icons/tb";
-import { buildAuthHeaders } from "../client";
 import type { ApiBaseUrl } from "../client";
-import { assetProxyUrl } from "./ImageNode";
+import { resolvedAssetUrl } from "./ImageNode";
 import type { CanvasNode, CanvasViewport } from "./types";
 import { extractError } from "../utils/extractError";
 
@@ -36,16 +35,16 @@ export function CanvasInpaintOverlay({ node, viewport, apiBaseUrl, onComplete, o
   const screenW = node.width * viewport.scale;
   const screenH = node.height * viewport.scale;
 
-  // Load image via API proxy (avoids S3 CORS), falling back to direct fetch
+  // Load the image through the native asset URL resolver.
   useEffect(() => {
     let active = true;
     let objectUrl: string | null = null;
 
     (async () => {
       try {
-        const proxyUrl = assetProxyUrl(apiBaseUrl, node);
-        const fetchUrl = proxyUrl ?? node.src!;
-        const res = await fetch(fetchUrl, { headers: buildAuthHeaders(), credentials: "include" });
+        const imageUrl = resolvedAssetUrl(apiBaseUrl, node);
+        const fetchUrl = imageUrl ?? node.src!;
+        const res = await fetch(fetchUrl);
         if (!res.ok) throw new Error("Failed to load image");
         const blob = await res.blob();
         if (!active) return;

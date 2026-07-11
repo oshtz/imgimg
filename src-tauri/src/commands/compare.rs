@@ -59,7 +59,11 @@ pub async fn get_compare_models(state: State<'_, AppState>) -> AppResult<Compare
         }
 
         // Skip hidden workflows
-        if meta.get("hidden").and_then(|v| v.as_bool()).unwrap_or(false) {
+        if meta
+            .get("hidden")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+        {
             continue;
         }
 
@@ -70,7 +74,11 @@ pub async fn get_compare_models(state: State<'_, AppState>) -> AppResult<Compare
         }
 
         // Skip dynamic-model workflows (they need a model picker, not useful as standalone compare entries)
-        if meta.get("dynamicModel").and_then(|v| v.as_bool()).unwrap_or(false) {
+        if meta
+            .get("dynamicModel")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+        {
             continue;
         }
 
@@ -102,13 +110,16 @@ pub async fn get_compare_models(state: State<'_, AppState>) -> AppResult<Compare
             .and_then(|v| v.as_str())
             .map(String::from);
 
-        let supports_image_input = if meta.get("supportsImageInput").and_then(|v| v.as_bool()) == Some(false) {
-            false
-        } else {
-            meta.get("supportsImageInput").and_then(|v| v.as_bool()).unwrap_or(false)
-                || matches!(engine, "openrouter" | "replicate" | "fal" | "kie")
-                || template_str.contains("__IMAGE__")
-        };
+        let supports_image_input =
+            if meta.get("supportsImageInput").and_then(|v| v.as_bool()) == Some(false) {
+                false
+            } else {
+                meta.get("supportsImageInput")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false)
+                    || matches!(engine, "openrouter" | "replicate" | "fal" | "kie")
+                    || template_str.contains("__IMAGE__")
+            };
 
         models.push(CompareModel {
             id: format!("workflow:{}", wf.id),
@@ -194,7 +205,9 @@ pub async fn get_compare_groups(state: State<'_, AppState>) -> AppResult<Compare
         let entry = CompareGroupEntry {
             generation_id: gen.id.clone(),
             workflow_id: gen.workflow_used.clone(),
-            workflow_label: wf.map(|w| w.label.clone()).unwrap_or_else(|| gen.workflow_used.clone()),
+            workflow_label: wf
+                .map(|w| w.label.clone())
+                .unwrap_or_else(|| gen.workflow_used.clone()),
             provider: engine.to_string(),
             status: gen.status.clone(),
             assets: gen.assets.clone(),

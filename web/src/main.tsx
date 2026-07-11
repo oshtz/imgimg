@@ -3,6 +3,8 @@ import ReactDOM from "react-dom/client";
 import { ErrorBoundary } from "react-error-boundary";
 import { Toaster } from "sonner";
 import App from "./App";
+import "@fontsource-variable/azeret-mono";
+import "@fontsource-variable/azeret-mono/wght-italic.css";
 import "./index.css";
 
 function AppErrorFallback({ error, resetErrorBoundary }: { error: unknown; resetErrorBoundary: () => void }) {
