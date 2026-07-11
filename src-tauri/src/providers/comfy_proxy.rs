@@ -9,21 +9,18 @@ use tokio_tungstenite::tungstenite::Message;
 use crate::config::AppConfig;
 use crate::db::models::Asset;
 use crate::error::{AppError, AppResult};
-use crate::providers::common::{
-    detect_image_format, timestamp_suffix,
-};
 use crate::providers::comfy_types::{
-    ComfyHistoryItem, ComfyImageRef,
-    flatten_images, parse_save_node_mappings, replace_extension,
+    flatten_images, parse_save_node_mappings, ComfyHistoryItem, ComfyImageRef,
 };
 use crate::providers::comfy_ws::extract_preview_from_binary;
+use crate::providers::common::{detect_image_format, download_asset, timestamp_suffix};
 use crate::services::event_hub::EventHub;
 use crate::services::storage::LocalStorage;
 
 // Re-export types so that existing `use crate::providers::comfy_proxy::X` paths keep working.
 pub use crate::providers::comfy_types::{
-    AssetCallback, ComfyHistoryOutput, FullSetParams, PreviewCallback,
-    RemoveBackgroundParams, SaveNodeMapping, SimpleImageParams,
+    AssetCallback, ComfyHistoryOutput, FullSetParams, PreviewCallback, RemoveBackgroundParams,
+    SaveNodeMapping, SimpleImageParams,
 };
 
 // ── ComfyProxy ──
@@ -252,38 +249,18 @@ impl ComfyProxy {
 
     // ── Fetch Image ──
 
-    /// Download an image from ComfyUI by reference.
-    pub async fn fetch_comfy_image(&self, img_ref: &ComfyImageRef) -> AppResult<(Vec<u8>, String)> {
+    fn comfy_image_url(&self, img_ref: &ComfyImageRef) -> AppResult<reqwest::Url> {
         let subfolder = img_ref.subfolder.as_deref().unwrap_or("");
         let img_type = img_ref.image_type.as_deref().unwrap_or("output");
-        let url = format!(
-            "{}/view?filename={}&subfolder={}&type={}",
-            self.base_url, img_ref.filename, subfolder, img_type
-        );
-
-        let resp = self
-            .http_client
-            .get(&url)
-            .timeout(Duration::from_secs(60))
-            .send()
-            .await?;
-
-        if !resp.status().is_success() {
-            return Err(AppError::ProviderError(format!(
-                "ComfyUI image fetch failed for {}",
-                img_ref.filename
-            )));
+        let mut url = reqwest::Url::parse(&format!("{}/view", self.base_url.trim_end_matches('/')))
+            .map_err(|error| AppError::Config(format!("Invalid ComfyUI URL: {error}")))?;
+        {
+            let mut query = url.query_pairs_mut();
+            query.append_pair("filename", &img_ref.filename);
+            query.append_pair("subfolder", subfolder);
+            query.append_pair("type", img_type);
         }
-
-        let content_type = resp
-            .headers()
-            .get(reqwest::header::CONTENT_TYPE)
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or("image/png")
-            .to_string();
-        let bytes = resp.bytes().await?.to_vec();
-
-        Ok((bytes, content_type))
+        Ok(url)
     }
 
     /// Fetch an image from ComfyUI and store it as an asset.
@@ -295,20 +272,19 @@ impl ComfyProxy {
         img_ref: &ComfyImageRef,
         filename: &str,
     ) -> AppResult<Asset> {
-        let (bytes, content_type) = self.fetch_comfy_image(img_ref).await?;
-
-        // Determine extension from actual bytes or content type
-        let ext = detect_image_format(&bytes)
-            .unwrap_or_else(|| {
-                crate::providers::common::extension_from_content_type(&content_type)
-            });
-
-        // Replace extension in filename
-        let final_filename = replace_extension(filename, ext);
-
-        self.storage
-            .write_binary_asset(generation_id, asset_type, item_index, &final_filename, &bytes)
-            .await
+        let url = self.comfy_image_url(img_ref)?;
+        download_asset(
+            &self.http_client,
+            &self.storage,
+            url.as_str(),
+            None,
+            60_000,
+            generation_id,
+            asset_type,
+            item_index,
+            filename,
+        )
+        .await
     }
 
     // ── Generate Simple Image ──
@@ -320,11 +296,8 @@ impl ComfyProxy {
         let client_id = uuid::Uuid::new_v4().to_string();
 
         // Start preview stream (best-effort, runs in background)
-        let ws_handle = self.start_preview_stream(
-            &client_id,
-            &params.generation_id,
-            params.item_index,
-        );
+        let ws_handle =
+            self.start_preview_stream(&client_id, &params.generation_id, params.item_index);
 
         // Submit workflow
         let prompt_id = self.submit_prompt(&params.workflow, &client_id).await?;
@@ -451,7 +424,7 @@ impl ComfyProxy {
             } else {
                 images.len()
             };
-            for i in 1..item_end {
+            for (i, image) in images.iter().enumerate().take(item_end).skip(1) {
                 let item_index = (i - 1) as i64;
                 let filename = format!("item_{}.png", item_index);
                 let asset = self
@@ -459,7 +432,7 @@ impl ComfyProxy {
                         &params.generation_id,
                         "square",
                         Some(item_index),
-                        &images[i],
+                        image,
                         &filename,
                     )
                     .await?;
@@ -516,8 +489,14 @@ impl ComfyProxy {
             .ok_or_else(|| AppError::ProviderError("No output from ComfyUI regen".into()))?;
 
         let filename = format!("item_{}_{}.png", item_index, ts);
-        self.fetch_and_store_image(generation_id, "square", Some(item_index), img_ref, &filename)
-            .await
+        self.fetch_and_store_image(
+            generation_id,
+            "square",
+            Some(item_index),
+            img_ref,
+            &filename,
+        )
+        .await
     }
 
     // ── Remove Background ──
@@ -600,7 +579,9 @@ impl ComfyProxy {
         // Best-effort: preview streaming is optional
         let ws_url = format!(
             "{}/ws?clientId={}",
-            self.base_url.replace("http://", "ws://").replace("https://", "wss://"),
+            self.base_url
+                .replace("http://", "ws://")
+                .replace("https://", "wss://"),
             client_id
         );
         let storage = self.storage.clone();
@@ -629,9 +610,8 @@ impl ComfyProxy {
                                 Some(i) => format!("preview_{}.{}", i, ext),
                                 None => format!("preview.{}", ext),
                             };
-                            if let Ok(url) = storage
-                                .save_buffer(&gen_id, &filename, &image_bytes)
-                                .await
+                            if let Ok(url) =
+                                storage.save_buffer(&gen_id, &filename, &image_bytes).await
                             {
                                 // Emit preview event to frontend
                                 if let Some(ref hub) = event_hub {
@@ -664,4 +644,3 @@ impl ComfyProxy {
         }))
     }
 }
-

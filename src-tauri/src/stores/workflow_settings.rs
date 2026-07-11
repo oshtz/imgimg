@@ -48,11 +48,10 @@ pub async fn set_enabled_for_game(
 }
 
 async fn load(pool: &SqlitePool) -> AppResult<WorkflowSettings> {
-    let row: Option<(String,)> =
-        sqlx::query_as("SELECT value FROM app_settings WHERE key = ?")
-            .bind(SETTINGS_KEY)
-            .fetch_optional(pool)
-            .await?;
+    let row: Option<(String,)> = sqlx::query_as("SELECT value FROM app_settings WHERE key = ?")
+        .bind(SETTINGS_KEY)
+        .fetch_optional(pool)
+        .await?;
     match row {
         Some((json,)) => Ok(serde_json::from_str(&json).unwrap_or_else(|e| {
             log::warn!(

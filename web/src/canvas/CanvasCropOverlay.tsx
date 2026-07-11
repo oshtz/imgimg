@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TbCheck, TbX, TbArrowBackUp } from "react-icons/tb";
-import { buildAuthHeaders } from "../client";
 import type { ApiBaseUrl } from "../client";
-import { assetProxyUrl } from "./ImageNode";
+import { resolvedAssetUrl } from "./ImageNode";
 import type { CanvasNode, CanvasViewport } from "./types";
 
 type CropRect = { x: number; y: number; width: number; height: number };
@@ -109,10 +108,9 @@ export function CanvasCropOverlay({ node, viewport, apiBaseUrl, onApply, onReset
 
     (async () => {
       try {
-        const proxyUrl = assetProxyUrl(apiBaseUrl, node);
-        const fetchUrl = proxyUrl ?? node.src!;
-        const headers = proxyUrl ? { ...buildAuthHeaders() } : {};
-        const res = await fetch(fetchUrl, { headers, ...(proxyUrl ? { credentials: "include" as const } : {}) });
+        const imageUrl = resolvedAssetUrl(apiBaseUrl, node);
+        const fetchUrl = imageUrl ?? node.src!;
+        const res = await fetch(fetchUrl);
         if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
         const blob = await res.blob();
         if (!active) return;

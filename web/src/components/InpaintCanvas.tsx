@@ -1,5 +1,4 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { buildAuthHeaders } from "../client";
 
 export type InpaintCanvasHandle = {
   exportMaskedImage: (options?: { invert?: boolean }) => Promise<{
@@ -17,7 +16,7 @@ type Point = { x: number; y: number };
 
 type InpaintCanvasProps = {
   imageSrc: string;
-  /** URL to fetch image bytes from (avoids S3 CORS). Falls back to imageSrc. */
+  /** Native-resolved URL used to fetch image bytes. Falls back to imageSrc. */
   fetchSrc?: string;
   brushSize: number;
   mode: "paint" | "erase";
@@ -39,7 +38,7 @@ export const InpaintCanvas = forwardRef<InpaintCanvasHandle, InpaintCanvasProps>
       const fetchUrl = props.fetchSrc ?? props.imageSrc;
       (async () => {
         try {
-          const res = await fetch(fetchUrl, { headers: buildAuthHeaders(), credentials: "include" });
+          const res = await fetch(fetchUrl);
           if (!res.ok) throw new Error("Failed to load image");
           const blob = await res.blob();
           if (!active) return;

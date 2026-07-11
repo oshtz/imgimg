@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useId, useRef } from "react";
 import { TbX, TbAlertTriangle } from "react-icons/tb";
 
 interface ConfirmDialogProps {
@@ -22,10 +22,25 @@ export function ConfirmDialog({
   onCancel,
   isDestructive = true,
 }: ConfirmDialogProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         onCancel();
+      } else if (e.key === "Tab") {
+        const buttons = dialogRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)");
+        if (!buttons?.length) return;
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     },
     [onCancel]
@@ -33,8 +48,13 @@ export function ConfirmDialog({
 
   useEffect(() => {
     if (!isOpen) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    cancelRef.current?.focus();
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      previouslyFocused?.focus();
+    };
   }, [isOpen, handleKeyDown]);
 
   if (!isOpen) return null;
@@ -50,7 +70,13 @@ export function ConfirmDialog({
       />
 
       {/* Dialog */}
-      <div className="relative z-10 w-full max-w-md rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-black">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="relative z-10 w-full max-w-md rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-black"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <div className="flex items-center gap-3">
@@ -59,9 +85,10 @@ export function ConfirmDialog({
                 <TbAlertTriangle className="h-5 w-5 text-red-600 dark:text-red-500" />
               </div>
             )}
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
+            <h2 id={titleId} className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
           </div>
           <button
+            ref={cancelRef}
             type="button"
             onClick={onCancel}
             className={[

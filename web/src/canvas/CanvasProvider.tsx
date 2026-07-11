@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, useRef, useState, useMemo, type ReactNode, type Dispatch } from "react";
+import { createContext, useCallback, useContext, useReducer, useEffect, useRef, useState, useMemo, type ReactNode, type Dispatch } from "react";
 import { undoableCanvasReducer, initialUndoableState, type CanvasAction } from "./canvasReducer";
 import { getCanvasState, putCanvasState, type ApiBaseUrl } from "../client";
 import { getCanvasLocalState, getCanvasStateAsync, putCanvasLocalState } from "./canvasStorage";
@@ -20,7 +20,9 @@ type CanvasContextValue = {
   loading: boolean;
   /** True when loaded state has nodes but no persisted viewport — caller should FIT_TO_CONTENT */
   needsInitialFit: boolean;
+  saving: boolean;
   saveError: string | null;
+  retrySave: () => void;
   currentUser: { userId: string; email: string } | null;
   canUndo: boolean;
   canRedo: boolean;
@@ -45,7 +47,10 @@ export function CanvasProvider({ children, apiBaseUrl, canvasId, currentUser }: 
   const [loading, setLoading] = useState(true);
   const [needsInitialFit, setNeedsInitialFit] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveRetry, setSaveRetry] = useState(0);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveSequenceRef = useRef(0);
   const loadedIdRef = useRef<string | null>(null);
   const lastLoadedRef = useRef<number>(0);
   const stateVersionRef = useRef<number>(0);
@@ -61,6 +66,7 @@ export function CanvasProvider({ children, apiBaseUrl, canvasId, currentUser }: 
 
     let cancelled = false;
     setLoading(true);
+    setSaveError(null);
 
     (async () => {
       try {
@@ -168,6 +174,7 @@ export function CanvasProvider({ children, apiBaseUrl, canvasId, currentUser }: 
       } catch (err) {
         if (!cancelled) {
           console.error("Failed to load canvas state:", err);
+          setSaveError(err instanceof Error ? err.message : "Could not load canvas");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -193,6 +200,8 @@ export function CanvasProvider({ children, apiBaseUrl, canvasId, currentUser }: 
     }
   }, [state.viewport, loading, persistKey]);
 
+  const retrySave = useCallback(() => setSaveRetry((value) => value + 1), []);
+
   // Debounced save
   useEffect(() => {
     if (loading || !persistKey || loadedIdRef.current !== persistKey) return;
@@ -201,6 +210,7 @@ export function CanvasProvider({ children, apiBaseUrl, canvasId, currentUser }: 
     if (currentVersion <= lastLoadedRef.current) return;
 
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    setSaving(true);
     saveTimerRef.current = setTimeout(() => {
       const payload = {
         // Filter out loading skeleton nodes — they are transient and should not be persisted
@@ -215,25 +225,30 @@ export function CanvasProvider({ children, apiBaseUrl, canvasId, currentUser }: 
         activeEngine: state.activeEngine,
       };
 
-      if (canvasId) {
-        // Multi-canvas: save to localStorage
-        putCanvasLocalState(canvasId, payload);
-        setSaveError(null);
-      } else {
-        // Legacy: save to server
-        putCanvasState(apiBaseUrl, payload).then(() => {
+      const sequence = ++saveSequenceRef.current;
+      const save = canvasId
+        ? putCanvasLocalState(canvasId, payload)
+        : putCanvasState(apiBaseUrl, payload);
+
+      void save.then(() => {
+        if (sequence === saveSequenceRef.current) {
           setSaveError(null);
-        }).catch((err) => {
+          setSaving(false);
+          lastLoadedRef.current = currentVersion;
+        }
+      }).catch((err) => {
+        if (sequence === saveSequenceRef.current) {
           console.error("Failed to save canvas state:", err);
           setSaveError(err instanceof Error ? err.message : "Save failed");
-        });
-      }
+          setSaving(false);
+        }
+      });
     }, SAVE_DEBOUNCE_MS);
 
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [state.nodes, state.chatMessages, state.chatWorkflowId, state.nextZIndex, state.connectors, state.pinnedModelIds, state.pinnedWorkflowIds, state.selectedProviderModelId, state.activeEngine, loading, apiBaseUrl, persistKey, canvasId]);
+  }, [state.nodes, state.chatMessages, state.chatWorkflowId, state.nextZIndex, state.connectors, state.pinnedModelIds, state.pinnedWorkflowIds, state.selectedProviderModelId, state.activeEngine, loading, apiBaseUrl, persistKey, canvasId, saveRetry]);
 
   const ctxUser = useMemo(
     () => currentUser ? { userId: currentUser.id, email: currentUser.email } : null,
@@ -241,8 +256,8 @@ export function CanvasProvider({ children, apiBaseUrl, canvasId, currentUser }: 
   );
 
   const contextValue = useMemo(
-    () => ({ state, dispatch, loading, needsInitialFit, saveError, currentUser: ctxUser, canUndo, canRedo, canvasId }),
-    [state, dispatch, loading, needsInitialFit, saveError, ctxUser, canUndo, canRedo, canvasId]
+    () => ({ state, dispatch, loading, needsInitialFit, saving, saveError, retrySave, currentUser: ctxUser, canUndo, canRedo, canvasId }),
+    [state, dispatch, loading, needsInitialFit, saving, saveError, retrySave, ctxUser, canUndo, canRedo, canvasId]
   );
 
   return (

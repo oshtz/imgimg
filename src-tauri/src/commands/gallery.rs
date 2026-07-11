@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+use crate::db::models::Generation;
 use crate::error::AppResult;
 use crate::state::AppState;
 use crate::stores::generation_store;
 use crate::utils::cursor;
-use crate::db::models::Generation;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -35,10 +35,7 @@ pub async fn list_gallery(
     state: State<'_, AppState>,
     params: GalleryParams,
 ) -> AppResult<GalleryResult> {
-    let decoded_cursor = params
-        .cursor
-        .as_deref()
-        .and_then(cursor::decode_cursor);
+    let decoded_cursor = params.cursor.as_deref().and_then(cursor::decode_cursor);
 
     let result = generation_store::list_gallery_simple(
         &state.db,

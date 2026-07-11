@@ -4,49 +4,7 @@
 
 :root {
   --imgimg-ui-scale: 1;
-  --counter-grad-from: rgba(15, 23, 42, 0.14);
-  --counter-grad-to: transparent;
-  --counter-bg: rgba(0, 0, 0, 0.03);
-  
-  /* Chart colors - light mode */
-  --chart-grid: rgba(0, 0, 0, 0.08);
-  --chart-axis: #71717a;
-  --chart-text: #3f3f46;
-  --chart-tooltip-bg: #ffffff;
-  --chart-tooltip-border: #e4e4e7;
-  --chart-tooltip-text: #18181b;
-  
-  /* Chart accent colors */
-  --chart-amber: #f59e0b;
-  --chart-blue: #3b82f6;
-  --chart-green: #10b981;
-  --chart-red: #ef4444;
-  --chart-purple: #8b5cf6;
-  --chart-pink: #ec4899;
-
   font-size: calc(16px * var(--imgimg-ui-scale));
-}
-
-.dark {
-  --counter-grad-from: rgba(255, 255, 255, 0.08);
-  --counter-grad-to: transparent;
-  --counter-bg: rgba(255, 255, 255, 0.06);
-  
-  /* Chart colors - dark mode */
-  --chart-grid: rgba(255, 255, 255, 0.08);
-  --chart-axis: #a1a1aa;
-  --chart-text: #d4d4d8;
-  --chart-tooltip-bg: #18181b;
-  --chart-tooltip-border: #27272a;
-  --chart-tooltip-text: #fafafa;
-  
-  /* Chart accent colors - slightly brighter for dark mode */
-  --chart-amber: #fbbf24;
-  --chart-blue: #60a5fa;
-  --chart-green: #34d399;
-  --chart-red: #f87171;
-  --chart-purple: #a78bfa;
-  --chart-pink: #f472b6;
 }
 
 /* Enhance prompt glow */
@@ -65,46 +23,9 @@
   animation: enhance-glow 2.5s ease-in-out infinite;
 }
 
-/* Recharts custom styling */
-.recharts-cartesian-axis-tick-value {
-  fill: var(--chart-text);
-  font-size: 11px;
-}
-
-.recharts-legend-item-text {
-  color: var(--chart-text) !important;
-  font-size: 12px;
-}
-
-.recharts-tooltip-wrapper {
-  outline: none;
-}
-
-.recharts-default-tooltip {
-  background-color: var(--chart-tooltip-bg) !important;
-  border: 1px solid var(--chart-tooltip-border) !important;
-  border-radius: 8px !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1) !important;
-}
-
-.recharts-tooltip-label {
-  color: var(--chart-tooltip-text) !important;
-  font-weight: 600 !important;
-  margin-bottom: 4px !important;
-}
-
-.recharts-tooltip-item {
-  color: var(--chart-tooltip-text) !important;
-  font-size: 12px !important;
-}
-
-.recharts-tooltip-item-name {
-  color: var(--chart-axis) !important;
-}
-
 /* Sonner toast overrides — on-brand font, colors, and radii */
 [data-sonner-toaster] {
-  font-family: "Azeret Mono" !important;
+  font-family: "Azeret Mono Variable", ui-monospace, monospace !important;
 }
 
 /* Light mode toast (default) */

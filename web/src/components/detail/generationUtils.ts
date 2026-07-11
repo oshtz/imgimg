@@ -62,7 +62,8 @@ export function pickDefaultAsset(g: Generation, registry: AssetTypeRegistry) {
 
 export function statusPill(status: Generation["status"]) {
   if (status === "succeeded") return "bg-accent-forest/10 text-accent-forest";
-  if (status === "failed") return "bg-red-500/10 text-red-700 dark:text-red-300";
+  if (status === "failed" || status === "interrupted") return "bg-red-500/10 text-red-700 dark:text-red-300";
+  if (status === "cancelled" || status === "cancel_requested") return "bg-amber-500/10 text-amber-700 dark:text-amber-300";
   if (status === "running") return "bg-accent-sky/10 text-accent-sky";
   return "bg-zinc-500/10 text-zinc-700 dark:text-zinc-300";
 }

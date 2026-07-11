@@ -9,7 +9,7 @@ use crate::config::AppConfig;
 use crate::db::models::Asset;
 use crate::error::{AppError, AppResult};
 use crate::providers::common::{
-    bearer_headers, download_bytes, extension_from_content_type, timestamp_suffix,
+    bearer_headers, download_asset, extension_from_content_type, timestamp_suffix,
 };
 use crate::services::storage::LocalStorage;
 
@@ -29,23 +29,23 @@ impl KieProxy {
         storage: Arc<LocalStorage>,
         db: SqlitePool,
     ) -> Self {
-        Self { http_client, config, storage, db }
+        Self {
+            http_client,
+            config,
+            storage,
+            db,
+        }
     }
 
     pub async fn get_api_key(&self) -> AppResult<String> {
         if let Some(key) = crate::stores::admin_settings::get_kie_api_key(&self.db).await? {
             return Ok(key);
         }
-        if let Some(ref key) = self.config.kie_api_key {
-            if !key.is_empty() {
-                return Ok(key.clone());
-            }
-        }
         Err(AppError::Config("Kie.ai API key not configured".into()))
     }
 
     pub async fn check_health(&self) -> bool {
-        self.get_api_key().await.is_ok()
+        false
     }
 
     /// Submit a task and poll until completion. Returns (output_url, content_type).
@@ -58,10 +58,10 @@ impl KieProxy {
         let api_key = self.get_api_key().await?;
 
         // Submit task
-        let url = format!("{}{}", KIE_BASE, endpoint);
+        let url = kie_endpoint_url(endpoint)?;
         let resp = self
             .http_client
-            .post(&url)
+            .post(url)
             .headers(bearer_headers(&api_key)?)
             .json(input)
             .timeout(Duration::from_secs(30))
@@ -105,14 +105,10 @@ impl KieProxy {
         Ok((output_url, content_type))
     }
 
-    async fn poll_task(
-        &self,
-        task_id: &str,
-        api_key: &str,
-    ) -> AppResult<serde_json::Value> {
+    async fn poll_task(&self, task_id: &str, api_key: &str) -> AppResult<serde_json::Value> {
         let url = format!("{}/api/v1/task/{}", KIE_BASE, task_id);
-        let deadline = tokio::time::Instant::now()
-            + Duration::from_millis(self.config.kie_timeout_ms);
+        let deadline =
+            tokio::time::Instant::now() + Duration::from_millis(self.config.kie_timeout_ms);
         let interval = self.config.kie_poll_interval_ms;
 
         loop {
@@ -161,15 +157,12 @@ impl KieProxy {
         endpoint: &str,
         filename_prefix: Option<&str>,
     ) -> AppResult<Asset> {
-        let (output_url, content_type) = self
-            .run_prediction(input, endpoint, None)
-            .await?;
+        let (output_url, content_type) = self.run_prediction(input, endpoint, None).await?;
 
         if output_url.is_empty() {
             return Err(AppError::ProviderError("No output URL from Kie.ai".into()));
         }
 
-        let (bytes, _) = download_bytes(&self.http_client, &output_url, None, 60_000).await?;
         let ext = extension_from_content_type(&content_type);
         let filename = format!(
             "{}_{}.{}",
@@ -178,8 +171,67 @@ impl KieProxy {
             ext
         );
 
-        self.storage
-            .write_binary_asset(generation_id, asset_type, item_index, &filename, &bytes)
-            .await
+        download_asset(
+            &self.http_client,
+            &self.storage,
+            &output_url,
+            None,
+            60_000,
+            generation_id,
+            asset_type,
+            item_index,
+            &filename,
+        )
+        .await
+    }
+}
+
+fn kie_endpoint_url(endpoint: &str) -> AppResult<reqwest::Url> {
+    if !endpoint.starts_with("/api/") {
+        return Err(AppError::BadRequest(
+            "Kie endpoint must be a relative /api/ route".into(),
+        ));
+    }
+
+    let base = reqwest::Url::parse(&format!("{KIE_BASE}/"))
+        .map_err(|e| AppError::Internal(format!("Invalid Kie base URL: {e}")))?;
+    let url = base
+        .join(endpoint.trim_start_matches('/'))
+        .map_err(|e| AppError::BadRequest(format!("Invalid Kie endpoint: {e}")))?;
+    if url.scheme() != "https"
+        || url.host_str() != Some("api.kie.ai")
+        || !url.username().is_empty()
+        || url.password().is_some()
+    {
+        return Err(AppError::BadRequest(
+            "Kie endpoint host is not allowed".into(),
+        ));
+    }
+    Ok(url)
+}
+
+#[cfg(test)]
+mod endpoint_tests {
+    use super::kie_endpoint_url;
+
+    #[test]
+    fn kie_endpoints_are_confined_to_the_provider_host() {
+        assert_eq!(
+            kie_endpoint_url("/api/v1/task/create").unwrap().as_str(),
+            "https://api.kie.ai/api/v1/task/create"
+        );
+
+        for endpoint in [
+            "@evil.example/path",
+            "/@evil.example/path",
+            "//evil.example/api/task",
+            "https://evil.example/api/task",
+            "/v1/task",
+        ] {
+            assert!(
+                kie_endpoint_url(endpoint).is_err(),
+                "accepted unsafe endpoint: {endpoint}"
+            );
+        }
     }
 }

@@ -43,7 +43,7 @@ function CanvasWorkspaceInner({
 }: CanvasWorkspaceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const { state, dispatch, loading, needsInitialFit } = useCanvas();
+  const { state, dispatch, loading, needsInitialFit, saving, saveError, retrySave } = useCanvas();
   const [contextMenu, setContextMenu] = useState<{ nodeId: string; x: number; y: number } | null>(null);
   const [chatOpen, setChatOpen] = useState(() => {
     const saved = localStorage.getItem("imgimg.canvas.chatOpen");
@@ -232,10 +232,39 @@ function CanvasWorkspaceInner({
           <div className="pointer-events-none absolute inset-0 z-50 border-4 border-dashed border-zinc-400 bg-zinc-100/10" />
         )}
 
+        <section className="sr-only focus-within:not-sr-only focus-within:absolute focus-within:left-3 focus-within:top-14 focus-within:z-50 focus-within:max-h-64 focus-within:overflow-auto focus-within:rounded-lg focus-within:bg-white focus-within:p-3 focus-within:shadow-lg dark:focus-within:bg-zinc-900" aria-label="Canvas objects">
+          <h2 className="text-sm font-semibold">Canvas objects</h2>
+          {state.nodes.length === 0 ? <p className="text-xs">No objects</p> : (
+            <ul className="mt-2 space-y-1">
+              {state.nodes.map((node, index) => (
+                <li key={node.id}>
+                  <button type="button" onClick={() => dispatch({ type: "SELECT_NODE", id: node.id })} aria-pressed={state.selectedNodeIds.has(node.id)} className="rounded px-2 py-1 text-left text-xs focus:ring-2 focus:ring-zinc-500">
+                    {node.type ?? "image"} object {index + 1}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
         {/* Toolbar */}
         <div className="absolute left-1/2 top-3 z-20 -translate-x-1/2">
           <CanvasToolbar history={history} assetUrl={assetUrl} apiBaseUrl={apiBaseUrl} containerWidth={dimensions.width} containerHeight={dimensions.height} stageRef={stageRef} layersOpen={layersOpen} onToggleLayers={() => setLayersOpen((p) => !p)} onPresent={() => setPresenting(true)} onTemplate={() => setTemplatePickerOpen(true)} drawColor={drawColor} drawWidth={drawWidth} onDrawColorChange={setDrawColor} onDrawWidthChange={setDrawWidth} engines={availableEngines} activeEngine={activeEngine} onEngineChange={setActiveEngine} />
         </div>
+
+        {!loading && (
+          <div
+            className="absolute right-3 top-3 z-20 rounded-md bg-white/90 px-2 py-1 text-[11px] text-zinc-500 shadow-sm backdrop-blur dark:bg-zinc-900/90 dark:text-zinc-400"
+            role="status"
+            aria-live="polite"
+          >
+            {saveError ? (
+              <button type="button" onClick={retrySave} className="text-red-600 hover:underline dark:text-red-400">
+                Save failed · Retry
+              </button>
+            ) : saving ? "Saving…" : "Saved"}
+          </div>
+        )}
 
         {/* Canvas */}
         <div ref={containerRef} className="min-h-0 flex-1">

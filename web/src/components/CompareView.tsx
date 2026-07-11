@@ -14,7 +14,7 @@ import {
 import type { ApiBaseUrl, CompareModel, CompareGroup, ProviderStatus } from "../api";
 import { getCompareModels, getCompareGroups, createGeneration } from "../client";
 import type { Asset, Generation, SavedPrompt } from "../types";
-import type { GenerationSseEvent } from "../useGenerationEvents";
+import type { GenerationEventEnvelope } from "../useGenerationEvents";
 import { useGenerationEvents } from "../useGenerationEvents";
 import { CompareModelPicker } from "./CompareModelPicker";
 import { CompareResultsGrid, type CompareEntry } from "./CompareResultsGrid";
@@ -209,11 +209,10 @@ export function CompareView({
 
   // Listen for generation events and update compare group entries.
   useGenerationEvents({
-    apiBaseUrl,
     generationId: null,
     enabled: compareGroup !== null,
     onEvent: useCallback(
-      (evt: GenerationSseEvent) => {
+      (evt: GenerationEventEnvelope) => {
         setCompareGroup((prev) => {
           if (!prev) return prev;
 

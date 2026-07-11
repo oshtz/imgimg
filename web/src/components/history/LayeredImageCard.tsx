@@ -9,7 +9,7 @@ import {
   type ResizeState,
   type LayerExportFormat,
   type LayerImageInfo,
-  fetchImageViaProxy,
+  fetchAssetImage,
   loadLayerImageInfo,
   readLayerStateFromStorage,
   layerStateStorageKey,
@@ -115,7 +115,7 @@ export function LayeredImageCard(props: {
         const updates: Record<string, LayerImageInfo> = {};
         for (const layer of missing) {
           try {
-            const blobUrl = await fetchImageViaProxy(props.apiBaseUrl, layer);
+            const blobUrl = await fetchAssetImage(props.apiBaseUrl, layer, props.assetUrl);
             if (cancelled) { URL.revokeObjectURL(blobUrl); return; }
             const info = await loadLayerImageInfo(blobUrl, blobUrl);
             if (cancelled) {

@@ -21,12 +21,10 @@ pub async fn generate(
 ) -> AppResult<Vec<String>> {
     let prompt = build_prompt_from_template(&request.prompt_template, &request.theme);
 
-    let messages = vec![
-        serde_json::json!({
-            "role": "user",
-            "content": prompt,
-        }),
-    ];
+    let messages = vec![serde_json::json!({
+        "role": "user",
+        "content": prompt,
+    })];
 
     let temperature = request.temperature.unwrap_or(1.0);
     let max_tokens = request.max_tokens.unwrap_or(8192);

@@ -43,8 +43,7 @@ pub(crate) fn extract_preview_from_binary(raw: &[u8]) -> Option<Vec<u8>> {
 
 /// Try to parse a binary framed event: [length_header][event_name][payload]
 fn try_parse_binary_framed_event(bytes: &[u8]) -> Option<Vec<u8>> {
-    let event_name_re =
-        regex::Regex::new(r"^[a-z0-9_:\-]{3,64}$").unwrap();
+    let event_name_re = regex::Regex::new(r"^[a-z0-9_:\-]{3,64}$").unwrap();
 
     // Format 1: 4-byte LE length header
     if bytes.len() >= 6 {
@@ -61,7 +60,7 @@ fn try_parse_binary_framed_event(bytes: &[u8]) -> Option<Vec<u8>> {
     // Format 2: 1-byte length header
     if bytes.len() >= 2 {
         let len = bytes[0] as usize;
-        if len > 0 && len < 256 && 1 + len <= bytes.len() {
+        if len > 0 && len < 256 && len < bytes.len() {
             if let Ok(name) = std::str::from_utf8(&bytes[1..1 + len]) {
                 if event_name_re.is_match(name) {
                     return Some(bytes[1 + len..].to_vec());

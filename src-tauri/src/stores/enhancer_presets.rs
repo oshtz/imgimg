@@ -25,17 +25,19 @@ pub async fn list_presets(pool: &SqlitePool) -> AppResult<Vec<EnhancerPreset>> {
 
     Ok(rows
         .into_iter()
-        .map(|(id, name, system_prompt, is_default, sort_order, created_at, updated_at)| {
-            EnhancerPreset {
-                id,
-                name,
-                system_prompt,
-                is_default,
-                sort_order,
-                created_at,
-                updated_at,
-            }
-        })
+        .map(
+            |(id, name, system_prompt, is_default, sort_order, created_at, updated_at)| {
+                EnhancerPreset {
+                    id,
+                    name,
+                    system_prompt,
+                    is_default,
+                    sort_order,
+                    created_at,
+                    updated_at,
+                }
+            },
+        )
         .collect())
 }
 
@@ -49,14 +51,16 @@ pub async fn get_preset(pool: &SqlitePool, id: &str) -> AppResult<Option<Enhance
     .await?;
 
     Ok(row.map(
-        |(id, name, system_prompt, is_default, sort_order, created_at, updated_at)| EnhancerPreset {
-            id,
-            name,
-            system_prompt,
-            is_default,
-            sort_order,
-            created_at,
-            updated_at,
+        |(id, name, system_prompt, is_default, sort_order, created_at, updated_at)| {
+            EnhancerPreset {
+                id,
+                name,
+                system_prompt,
+                is_default,
+                sort_order,
+                created_at,
+                updated_at,
+            }
         },
     ))
 }
@@ -72,14 +76,16 @@ pub async fn get_active_preset(pool: &SqlitePool) -> AppResult<Option<EnhancerPr
     .next();
 
     Ok(row.map(
-        |(id, name, system_prompt, is_default, sort_order, created_at, updated_at)| EnhancerPreset {
-            id,
-            name,
-            system_prompt,
-            is_default,
-            sort_order,
-            created_at,
-            updated_at,
+        |(id, name, system_prompt, is_default, sort_order, created_at, updated_at)| {
+            EnhancerPreset {
+                id,
+                name,
+                system_prompt,
+                is_default,
+                sort_order,
+                created_at,
+                updated_at,
+            }
         },
     ))
 }
@@ -97,9 +103,7 @@ pub async fn upsert_preset(
     pool: &SqlitePool,
     input: UpsertEnhancerPreset,
 ) -> AppResult<EnhancerPreset> {
-    let id = input
-        .id
-        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let id = input.id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     let sort_order = input.sort_order.unwrap_or(0);
 
     sqlx::query(

@@ -14,7 +14,7 @@ use crate::providers::openrouter_proxy::{ImageGenParams, OpenRouterProxy};
 use crate::providers::replicate_proxy::ReplicateProxy;
 use crate::providers::workflow_manager::{self, Engine, InjectParams};
 use crate::services::event_hub::EventHub;
-use crate::services::queue::{ConcurrentQueue, FifoQueue};
+use crate::services::queue::GenerationQueue;
 use crate::services::storage::LocalStorage;
 use crate::stores::admin_settings;
 use crate::stores::generation_store;
@@ -63,8 +63,7 @@ pub struct DispatchContext {
     pub event_hub: EventHub,
     pub storage: Arc<LocalStorage>,
     pub comfy_pool: Arc<ComfyPool>,
-    pub comfy_queue: Arc<FifoQueue>,
-    pub concurrent_queue: Arc<ConcurrentQueue>,
+    pub generation_queue: Arc<GenerationQueue>,
     pub http_client: reqwest::Client,
     pub config: crate::config::AppConfig,
 }
@@ -76,8 +75,7 @@ impl DispatchContext {
             event_hub: state.event_hub.clone(),
             storage: state.storage.clone(),
             comfy_pool: state.comfy_pool.clone(),
-            comfy_queue: state.comfy_queue.clone(),
-            concurrent_queue: state.concurrent_queue.clone(),
+            generation_queue: state.generation_queue.clone(),
             http_client: state.http_client.clone(),
             config: state.config.clone(),
         }
@@ -108,16 +106,15 @@ pub async fn dispatch_generation(
     let meta = workflow_manager::get_meta(&template);
 
     // Resolve dimensions from aspect ratio if needed
-    let (width, height) = resolve_dimensions(
-        input.width,
-        input.height,
-        input.aspect_ratio.as_deref(),
-    );
+    let (width, height) =
+        resolve_dimensions(input.width, input.height, input.aspect_ratio.as_deref());
 
     // ── Apply preset (prefix, suffix, reference images) ──
     let mut input = input;
     if let Some(ref preset_id) = input.preset_id {
-        if let Ok(Some(preset)) = preset_settings::get_preset_by_id(&ctx.db, "default", preset_id).await {
+        if let Ok(Some(preset)) =
+            preset_settings::get_preset_by_id(&ctx.db, "default", preset_id).await
+        {
             // Strip #tag references from the prompt (e.g., "#my-preset" → "")
             let tag_pattern = format!("#{}", slug_for_matching(&preset.name));
             let cleaned_prompt = strip_preset_tags(&input.prompt, &tag_pattern);
@@ -127,9 +124,15 @@ pub async fn dispatch_generation(
             let prefix = preset.prompt_prefix.trim();
             let suffix = preset.prompt_suffix.trim();
             let user_prompt = cleaned_prompt.trim();
-            if !prefix.is_empty() { parts.push(prefix); }
-            if !user_prompt.is_empty() { parts.push(user_prompt); }
-            if !suffix.is_empty() { parts.push(suffix); }
+            if !prefix.is_empty() {
+                parts.push(prefix);
+            }
+            if !user_prompt.is_empty() {
+                parts.push(user_prompt);
+            }
+            if !suffix.is_empty() {
+                parts.push(suffix);
+            }
             input.prompt = parts.join(" ");
 
             // Merge preset images into image inputs, respecting maxImageInputs from workflow meta
@@ -143,9 +146,7 @@ pub async fn dispatch_generation(
                 let mut all_images = existing_images;
                 // Only add as many preset images as the model can accept
                 let remaining_slots = max_images.saturating_sub(existing_count);
-                all_images.extend(
-                    preset.image_urls.iter().take(remaining_slots).cloned()
-                );
+                all_images.extend(preset.image_urls.iter().take(remaining_slots).cloned());
                 input.images = Some(all_images);
                 // If single image wasn't set, use first preset image
                 if input.image.is_none() && !preset.image_urls.is_empty() {
@@ -175,7 +176,10 @@ pub async fn dispatch_generation(
         image_input_url: input.image.clone(),
         workflow_params: {
             // Merge internal state into workflow_params so regeneration can recover it
-            let mut wp = input.workflow_params.clone().unwrap_or_else(|| serde_json::json!({}));
+            let mut wp = input
+                .workflow_params
+                .clone()
+                .unwrap_or_else(|| serde_json::json!({}));
             if let Some(obj) = wp.as_object_mut() {
                 if let Some(ar) = &input.aspect_ratio {
                     obj.insert("aspect_ratio".into(), serde_json::json!(ar));
@@ -202,12 +206,22 @@ pub async fn dispatch_generation(
 
     // Unpack workflow_params into InjectParams fields
     let wp = input.workflow_params.as_ref();
-    let wp_expand_left = wp.and_then(|w| w.get("expand_left")).and_then(|v| v.as_i64());
-    let wp_expand_right = wp.and_then(|w| w.get("expand_right")).and_then(|v| v.as_i64());
-    let wp_expand_top = wp.and_then(|w| w.get("expand_top")).and_then(|v| v.as_i64());
-    let wp_expand_bottom = wp.and_then(|w| w.get("expand_bottom")).and_then(|v| v.as_i64());
+    let wp_expand_left = wp
+        .and_then(|w| w.get("expand_left"))
+        .and_then(|v| v.as_i64());
+    let wp_expand_right = wp
+        .and_then(|w| w.get("expand_right"))
+        .and_then(|v| v.as_i64());
+    let wp_expand_top = wp
+        .and_then(|w| w.get("expand_top"))
+        .and_then(|v| v.as_i64());
+    let wp_expand_bottom = wp
+        .and_then(|w| w.get("expand_bottom"))
+        .and_then(|v| v.as_i64());
     let wp_denoise = wp.and_then(|w| w.get("denoise")).and_then(|v| v.as_f64());
-    let wp_edge_blend = wp.and_then(|w| w.get("edge_blend")).and_then(|v| v.as_i64());
+    let wp_edge_blend = wp
+        .and_then(|w| w.get("edge_blend"))
+        .and_then(|v| v.as_i64());
 
     // For ComfyUI engine with image input, upload to ComfyUI first to get a filename
     let comfy_image = if engine == Engine::ComfyUI {
@@ -255,6 +269,7 @@ pub async fn dispatch_generation(
 
     // Route to correct queue based on engine
     let gen_id_clone = gen_id.clone();
+    let job_id_clone = job_id.clone();
     let ctx_db = ctx.db.clone();
     let ctx_eh = ctx.event_hub.clone();
     let ctx_storage = ctx.storage.clone();
@@ -281,7 +296,12 @@ pub async fn dispatch_generation(
 
     let job = async move {
         // Update status to running
-        let _ = generation_store::update_status(&ctx_db, &gen_id_clone, "running", None, None).await;
+        let running = generation_store::mark_job_running(&ctx_db, &gen_id_clone, &job_id_clone)
+            .await
+            .map_err(|error| error.to_string())?;
+        if !running {
+            return Ok(());
+        }
         ctx_eh.emit_generation_event(&GenerationEvent {
             generation_id: gen_id_clone.clone(),
             status: "running".into(),
@@ -331,14 +351,31 @@ pub async fn dispatch_generation(
                     ctx_storage.clone(),
                     ctx_db.clone(),
                 );
-                run_replicate_job(&proxy, &gen_id_clone, &injected, &meta, &model_id, replicate_model.as_deref(), {
-                    // Prefer images array; fall back to wrapping single image
-                    if let Some(imgs) = &images_input {
-                        if !imgs.is_empty() { Some(imgs.as_slice()) } else { None }
-                    } else {
-                        None
-                    }
-                }, image_input.as_deref(), dynamic_file_input_keys.as_deref(), prompt_field.as_deref(), workflow_params.as_ref()).await
+                run_replicate_job(
+                    &proxy,
+                    &gen_id_clone,
+                    &injected,
+                    &meta,
+                    &model_id,
+                    replicate_model.as_deref(),
+                    {
+                        // Prefer images array; fall back to wrapping single image
+                        if let Some(imgs) = &images_input {
+                            if !imgs.is_empty() {
+                                Some(imgs.as_slice())
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    },
+                    image_input.as_deref(),
+                    dynamic_file_input_keys.as_deref(),
+                    prompt_field.as_deref(),
+                    workflow_params.as_ref(),
+                )
+                .await
             }
             Engine::Fal => {
                 let proxy = FalProxy::new(
@@ -374,14 +411,22 @@ pub async fn dispatch_generation(
         match result {
             Ok(assets) if assets.is_empty() => {
                 let error_msg = "No images were generated".to_string();
-                let _ =
-                    generation_store::update_status(&ctx_db, &gen_id_clone, "failed", None, Some(Some(&error_msg))).await;
-                ctx_eh.emit_generation_event(&GenerationEvent {
-                    generation_id: gen_id_clone,
-                    status: "failed".into(),
-                    error: Some(error_msg.clone()),
-                    assets: None,
-                });
+                let failed = generation_store::finish_job(
+                    &ctx_db,
+                    &gen_id_clone,
+                    &job_id_clone,
+                    "failed",
+                    Some(&error_msg),
+                )
+                .await;
+                if failed.unwrap_or(false) {
+                    ctx_eh.emit_generation_event(&GenerationEvent {
+                        generation_id: gen_id_clone,
+                        status: "failed".into(),
+                        error: Some(error_msg.clone()),
+                        assets: None,
+                    });
+                }
                 Err(error_msg)
             }
             Ok(assets) => {
@@ -389,41 +434,49 @@ pub async fn dispatch_generation(
                 generation_store::upsert_assets(&ctx_db, &gen_id_clone, &assets)
                     .await
                     .map_err(|e| e.to_string())?;
-                generation_store::update_status(&ctx_db, &gen_id_clone, "succeeded", None, None)
-                    .await
-                    .map_err(|e| e.to_string())?;
-                ctx_eh.emit_generation_event(&GenerationEvent {
-                    generation_id: gen_id_clone,
-                    status: "succeeded".into(),
-                    error: None,
-                    assets: Some(assets),
-                });
+                let completed = generation_store::finish_job(
+                    &ctx_db,
+                    &gen_id_clone,
+                    &job_id_clone,
+                    "succeeded",
+                    None,
+                )
+                .await
+                .map_err(|e| e.to_string())?;
+                if completed {
+                    ctx_eh.emit_generation_event(&GenerationEvent {
+                        generation_id: gen_id_clone,
+                        status: "succeeded".into(),
+                        error: None,
+                        assets: Some(assets),
+                    });
+                }
                 Ok(())
             }
             Err(e) => {
                 let error_msg = e.to_string();
-                let _ =
-                    generation_store::update_status(&ctx_db, &gen_id_clone, "failed", None, Some(Some(error_msg.as_str()))).await;
-                ctx_eh.emit_generation_event(&GenerationEvent {
-                    generation_id: gen_id_clone,
-                    status: "failed".into(),
-                    error: Some(error_msg.clone()),
-                    assets: None,
-                });
+                let failed = generation_store::finish_job(
+                    &ctx_db,
+                    &gen_id_clone,
+                    &job_id_clone,
+                    "failed",
+                    Some(error_msg.as_str()),
+                )
+                .await;
+                if failed.unwrap_or(false) {
+                    ctx_eh.emit_generation_event(&GenerationEvent {
+                        generation_id: gen_id_clone,
+                        status: "failed".into(),
+                        error: Some(error_msg.clone()),
+                        assets: None,
+                    });
+                }
                 Err(error_msg)
             }
         }
     };
 
-    // Enqueue the job
-    match engine {
-        Engine::ComfyUI => {
-            ctx.comfy_queue.enqueue(job_id.clone(), job).await;
-        }
-        _ => {
-            ctx.concurrent_queue.enqueue(job_id.clone(), job);
-        }
-    }
+    ctx.generation_queue.enqueue(job_id.clone(), job).await;
 
     Ok(generation)
 }
@@ -492,7 +545,11 @@ async fn run_openrouter_job(
 ) -> AppResult<Vec<crate::db::models::Asset>> {
     let model = explicit_openrouter_model
         .map(|s| s.to_string())
-        .or_else(|| meta.get("model").and_then(|v| v.as_str()).map(|s| s.to_string()));
+        .or_else(|| {
+            meta.get("model")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        });
 
     let filenames: Vec<String> = (0..batch_size)
         .map(|i| format!("image_{}.png", i))
@@ -532,7 +589,11 @@ async fn run_replicate_job(
     workflow_params: Option<&serde_json::Value>,
 ) -> AppResult<Vec<crate::db::models::Asset>> {
     let replicate_model = explicit_replicate_model
-        .or_else(|| meta.get("replicate").and_then(|r| r.get("model")).and_then(|m| m.as_str()))
+        .or_else(|| {
+            meta.get("replicate")
+                .and_then(|r| r.get("model"))
+                .and_then(|m| m.as_str())
+        })
         .or_else(|| meta.get("model").and_then(|m| m.as_str()))
         .unwrap_or(model_id);
 
@@ -562,7 +623,9 @@ async fn run_replicate_job(
         if let Some(wp) = workflow_params {
             if let Some(wp_obj) = wp.as_object() {
                 for (k, v) in wp_obj {
-                    if k == "aspect_ratio" { continue; }
+                    if k == "aspect_ratio" {
+                        continue;
+                    }
                     obj.insert(k.clone(), v.clone());
                 }
             }
@@ -593,7 +656,9 @@ async fn run_replicate_job(
         if let Some(wp) = workflow_params {
             if let (Some(input_obj), Some(wp_obj)) = (input.as_object_mut(), wp.as_object()) {
                 for (k, v) in wp_obj {
-                    if k == "aspect_ratio" { continue; }
+                    if k == "aspect_ratio" {
+                        continue;
+                    }
                     input_obj.insert(k.clone(), v.clone());
                 }
             }
@@ -617,9 +682,10 @@ async fn run_replicate_job(
     // Falls back to "image"/"images" for backwards compatibility.
     if !all_images.is_empty() {
         if let Some(obj) = input.as_object_mut() {
-            let already_injected = obj.get("image")
+            let already_injected = obj
+                .get("image")
                 .and_then(|v| v.as_str())
-                .map_or(false, |s| s.starts_with("data:") || s.starts_with("http"));
+                .is_some_and(|s| s.starts_with("data:") || s.starts_with("http"));
             if !already_injected {
                 let api_token = proxy.get_api_token().await?;
                 // Resolve all images to uploadable URLs
@@ -645,13 +711,17 @@ async fn run_replicate_job(
                 for key in &image_keys {
                     // Keys suffixed with "[]" expect an array value — inject ALL resolved images
                     if let Some(bare_key) = key.strip_suffix("[]") {
-                        let urls_json: Vec<serde_json::Value> = resolved_urls.iter()
+                        let urls_json: Vec<serde_json::Value> = resolved_urls
+                            .iter()
                             .map(|u| serde_json::Value::String(u.clone()))
                             .collect();
                         obj.insert(bare_key.to_string(), serde_json::Value::Array(urls_json));
                     } else {
                         // Plain key — inject just the first image (backwards compat)
-                        obj.insert(key.to_string(), serde_json::Value::String(resolved_urls[0].clone()));
+                        obj.insert(
+                            key.to_string(),
+                            serde_json::Value::String(resolved_urls[0].clone()),
+                        );
                     }
                 }
             }
@@ -659,23 +729,33 @@ async fn run_replicate_job(
     }
 
     let file_input_keys_owned: Vec<String> = match dynamic_file_input_keys {
-        Some(keys) => keys.iter().map(|s| s.strip_suffix("[]").unwrap_or(s).to_string()).collect(),
-        None => {
-            meta.get("replicate")
-                .and_then(|r| r.get("fileInputKeys"))
-                .and_then(|k| k.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                        .collect()
-                })
-                .unwrap_or_default()
-        }
+        Some(keys) => keys
+            .iter()
+            .map(|s| s.strip_suffix("[]").unwrap_or(s).to_string())
+            .collect(),
+        None => meta
+            .get("replicate")
+            .and_then(|r| r.get("fileInputKeys"))
+            .and_then(|k| k.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .collect()
+            })
+            .unwrap_or_default(),
     };
     let file_input_keys: Vec<&str> = file_input_keys_owned.iter().map(|s| s.as_str()).collect();
 
     let asset = proxy
-        .generate_and_save(generation_id, "image", None, &input, replicate_model, &file_input_keys, None)
+        .generate_and_save(
+            generation_id,
+            "image",
+            None,
+            &input,
+            replicate_model,
+            &file_input_keys,
+            None,
+        )
         .await?;
 
     Ok(vec![asset])
@@ -694,7 +774,11 @@ async fn run_fal_job(
 ) -> AppResult<Vec<crate::db::models::Asset>> {
     // Resolution chain: explicit fal_model → meta.fal.endpoint → error
     let endpoint = explicit_fal_model
-        .or_else(|| meta.get("fal").and_then(|f| f.get("endpoint")).and_then(|e| e.as_str()))
+        .or_else(|| {
+            meta.get("fal")
+                .and_then(|f| f.get("endpoint"))
+                .and_then(|e| e.as_str())
+        })
         .ok_or_else(|| AppError::BadRequest("fal workflow missing endpoint/model".into()))?;
 
     let output_path = meta
@@ -713,7 +797,9 @@ async fn run_fal_job(
     if let Some(wp) = workflow_params {
         if let (Some(input_obj), Some(wp_obj)) = (input.as_object_mut(), wp.as_object()) {
             for (k, v) in wp_obj {
-                if k == "aspect_ratio" { continue; }
+                if k == "aspect_ratio" {
+                    continue;
+                }
                 input_obj.insert(k.clone(), v.clone());
             }
         }
@@ -731,7 +817,13 @@ async fn run_fal_job(
     if !all_images.is_empty() {
         if let Some(obj) = input.as_object_mut() {
             let image_keys: Vec<&str> = dynamic_file_input_keys
-                .and_then(|keys| if keys.is_empty() { None } else { Some(keys.iter().map(|s| s.as_str()).collect()) })
+                .and_then(|keys| {
+                    if keys.is_empty() {
+                        None
+                    } else {
+                        Some(keys.iter().map(|s| s.as_str()).collect())
+                    }
+                })
                 .unwrap_or_else(|| {
                     meta.get("fal")
                         .and_then(|f| f.get("fileInputKeys"))
@@ -741,12 +833,16 @@ async fn run_fal_job(
                 });
             for key in &image_keys {
                 if let Some(bare_key) = key.strip_suffix("[]") {
-                    let urls_json: Vec<serde_json::Value> = all_images.iter()
+                    let urls_json: Vec<serde_json::Value> = all_images
+                        .iter()
                         .map(|u| serde_json::Value::String(u.to_string()))
                         .collect();
                     obj.insert(bare_key.to_string(), serde_json::Value::Array(urls_json));
                 } else {
-                    obj.insert(key.to_string(), serde_json::Value::String(all_images[0].to_string()));
+                    obj.insert(
+                        key.to_string(),
+                        serde_json::Value::String(all_images[0].to_string()),
+                    );
                 }
             }
         }
@@ -754,27 +850,52 @@ async fn run_fal_job(
 
     // Convert aspect ratio values (e.g. "1:1") to fal.ai image_size enum values
     if let Some(obj) = input.as_object_mut() {
-        if let Some(size_val) = obj.get("image_size").and_then(|v| v.as_str()).map(|s| s.to_string()) {
+        if let Some(size_val) = obj
+            .get("image_size")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+        {
             let mapped = map_aspect_ratio_to_fal_size(&size_val);
             obj.insert("image_size".to_string(), serde_json::json!(mapped));
         }
     }
 
     let file_input_keys_owned: Vec<String> = dynamic_file_input_keys
-        .and_then(|keys| if keys.is_empty() { None } else {
-            Some(keys.iter().map(|s| s.strip_suffix("[]").unwrap_or(s).to_string()).collect())
+        .and_then(|keys| {
+            if keys.is_empty() {
+                None
+            } else {
+                Some(
+                    keys.iter()
+                        .map(|s| s.strip_suffix("[]").unwrap_or(s).to_string())
+                        .collect(),
+                )
+            }
         })
         .unwrap_or_else(|| {
             meta.get("fal")
                 .and_then(|f| f.get("fileInputKeys"))
                 .and_then(|k| k.as_array())
-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect()
+                })
                 .unwrap_or_default()
         });
     let file_input_keys: Vec<&str> = file_input_keys_owned.iter().map(|s| s.as_str()).collect();
 
     let asset = proxy
-        .generate_and_save(generation_id, "image", None, &input, endpoint, &file_input_keys, output_path, None)
+        .generate_and_save(
+            generation_id,
+            "image",
+            None,
+            &input,
+            endpoint,
+            &file_input_keys,
+            output_path,
+            None,
+        )
         .await?;
 
     Ok(vec![asset])
@@ -811,9 +932,11 @@ async fn run_kie_job(
 fn slug_for_matching(name: &str) -> String {
     name.chars()
         .map(|c| {
-            if c.is_alphanumeric() { c.to_ascii_lowercase() }
-            else if c == ' ' || c == '_' { '-' }
-            else { '-' }
+            if c.is_alphanumeric() {
+                c.to_ascii_lowercase()
+            } else {
+                '-'
+            }
         })
         .collect::<String>()
         .split('-')
@@ -830,16 +953,13 @@ fn strip_preset_tags(prompt: &str, tag_slug: &str) -> String {
     // Simple case-insensitive removal
     let lower = result.to_lowercase();
     let pat_lower = pattern.to_lowercase();
-    while let Some(pos) = lower.find(&pat_lower) {
+    if let Some(pos) = lower.find(&pat_lower) {
         // Check word boundary: next char should be whitespace/punctuation/end
         let end = pos + pattern.len();
         let at_boundary = end >= result.len()
             || !result[end..].starts_with(|c: char| c.is_alphanumeric() || c == '-' || c == '_');
         if at_boundary {
             result = format!("{}{}", &result[..pos], &result[end..]);
-            break; // Remove only the first match
-        } else {
-            break;
         }
     }
     // Clean up double spaces
@@ -954,8 +1074,7 @@ pub async fn dispatch_regenerate(
                 ctx.storage.clone(),
                 ctx.db.clone(),
             );
-            let replicate_model = stored_replicate_model.as_deref()
-                .filter(|s| !s.is_empty());
+            let replicate_model = stored_replicate_model.as_deref().filter(|s| !s.is_empty());
             run_replicate_job(
                 &proxy,
                 generation_id,
@@ -1018,13 +1137,7 @@ pub async fn dispatch_regenerate(
                 ctx.storage.clone(),
                 ctx.db.clone(),
             );
-            run_kie_job(
-                &proxy,
-                generation_id,
-                &injected,
-                &regen_meta,
-            )
-            .await?
+            run_kie_job(&proxy, generation_id, &injected, &regen_meta).await?
         }
     };
 
@@ -1038,13 +1151,6 @@ pub async fn dispatch_regenerate(
     stored_asset.asset_type = at.to_string();
     stored_asset.item_index = item_index;
     generation_store::upsert_asset(&ctx.db, generation_id, &stored_asset).await?;
-
-    ctx.event_hub.emit_generation_event(&GenerationEvent {
-        generation_id: generation_id.to_string(),
-        status: "succeeded".into(),
-        error: None,
-        assets: Some(vec![stored_asset.clone()]),
-    });
 
     Ok(stored_asset)
 }
@@ -1063,7 +1169,9 @@ pub async fn dispatch_inpaint(
     // Load inpaint workflow from settings
     let settings = admin_settings::get_settings(&ctx.db).await?;
     let inpaint_wf_id = settings.inpaint_workflow_id.ok_or_else(|| {
-        AppError::BadRequest("Inpaint workflow not configured. Set it in Settings > Feature Workflows.".into())
+        AppError::BadRequest(
+            "Inpaint workflow not configured. Set it in Settings > Feature Workflows.".into(),
+        )
     })?;
     let template = workflow_manager::load_template(&ctx.db, &inpaint_wf_id).await?;
 
@@ -1116,13 +1224,6 @@ pub async fn dispatch_inpaint(
 
     generation_store::upsert_asset(&ctx.db, generation_id, &asset).await?;
 
-    ctx.event_hub.emit_generation_event(&GenerationEvent {
-        generation_id: generation_id.to_string(),
-        status: "succeeded".into(),
-        error: None,
-        assets: Some(vec![asset.clone()]),
-    });
-
     Ok(asset)
 }
 
@@ -1136,7 +1237,10 @@ pub async fn dispatch_remove_background(
     // Load the rembg workflow from settings
     let settings = admin_settings::get_settings(&ctx.db).await?;
     let rembg_wf_id = settings.rembg_workflow_id.ok_or_else(|| {
-        AppError::BadRequest("Remove background workflow not configured. Set it in Settings > Feature Workflows.".into())
+        AppError::BadRequest(
+            "Remove background workflow not configured. Set it in Settings > Feature Workflows."
+                .into(),
+        )
     })?;
     let template = workflow_manager::load_template(&ctx.db, &rembg_wf_id).await?;
 
@@ -1148,8 +1252,14 @@ pub async fn dispatch_remove_background(
     let source_asset = gen
         .assets
         .iter()
-        .find(|a| a.item_index == Some(item_index) && a.asset_type != "rembg" && a.asset_type != "preview")
-        .or_else(|| gen.assets.iter().find(|a| a.asset_type != "rembg" && a.asset_type != "preview"))
+        .find(|a| {
+            a.item_index == Some(item_index) && a.asset_type != "rembg" && a.asset_type != "preview"
+        })
+        .or_else(|| {
+            gen.assets
+                .iter()
+                .find(|a| a.asset_type != "rembg" && a.asset_type != "preview")
+        })
         .ok_or_else(|| AppError::NotFound("No source asset found for rembg".into()))?;
 
     let image_url = &source_asset.url;
@@ -1200,14 +1310,6 @@ pub async fn dispatch_remove_background(
     // Store asset in DB
     generation_store::upsert_asset(&ctx.db, generation_id, &asset).await?;
 
-    // Emit event
-    ctx.event_hub.emit_generation_event(&GenerationEvent {
-        generation_id: generation_id.to_string(),
-        status: "succeeded".into(),
-        error: None,
-        assets: Some(vec![asset.clone()]),
-    });
-
     Ok(asset)
 }
 
@@ -1218,8 +1320,12 @@ fn map_aspect_ratio_to_fal_size(value: &str) -> &str {
     // Already a valid fal enum — pass through.
     if matches!(
         value,
-        "square" | "square_hd" | "landscape_4_3" | "landscape_16_9"
-            | "portrait_4_3" | "portrait_16_9"
+        "square"
+            | "square_hd"
+            | "landscape_4_3"
+            | "landscape_16_9"
+            | "portrait_4_3"
+            | "portrait_16_9"
     ) {
         return value;
     }
@@ -1270,7 +1376,10 @@ mod fal_size_tests {
     #[test]
     fn passes_through_valid_fal_enums() {
         assert_eq!(map_aspect_ratio_to_fal_size("square_hd"), "square_hd");
-        assert_eq!(map_aspect_ratio_to_fal_size("landscape_16_9"), "landscape_16_9");
+        assert_eq!(
+            map_aspect_ratio_to_fal_size("landscape_16_9"),
+            "landscape_16_9"
+        );
     }
 
     #[test]

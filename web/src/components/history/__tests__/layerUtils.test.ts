@@ -10,11 +10,6 @@ vi.stubGlobal("localStorage", {
   clear: () => storage.clear(),
 });
 
-// Mock buildAuthHeaders used by fetchImageViaProxy
-vi.mock("../../../client", () => ({
-  buildAuthHeaders: () => ({ Authorization: "Bearer test-token" }),
-}));
-
 import {
   layerStateStorageKey,
   readLayerStateFromStorage,
@@ -22,7 +17,7 @@ import {
   downloadBlob,
   loadImage,
   canvasToBlob,
-  fetchImageViaProxy,
+  fetchAssetImage,
 } from "../layerUtils";
 
 beforeEach(() => {
@@ -474,9 +469,9 @@ describe("loadImage", () => {
   });
 });
 
-// ── fetchImageViaProxy ──
+// ── fetchAssetImage ──
 
-describe("fetchImageViaProxy", () => {
+describe("fetchAssetImage", () => {
   it("calls fetch with correct URL and returns blob URL", async () => {
     const fakeBlob = new Blob(["image-data"]);
     const fakeUrl = "blob:http://localhost/proxy-blob";
@@ -491,15 +486,11 @@ describe("fetchImageViaProxy", () => {
       revokeObjectURL: vi.fn(),
     });
 
-    const asset = { id: "asset-1", generationId: "gen-1" } as any;
-    const result = await fetchImageViaProxy("http://api.test" as any, asset);
+    const asset = { id: "asset-1", generationId: "gen-1", url: "/storage/asset-1.png" } as any;
+    const result = await fetchAssetImage("http://api.test" as any, asset);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://api.test/generations/gen-1/assets/asset-1/raw",
-      expect.objectContaining({
-        headers: { Authorization: "Bearer test-token" },
-        credentials: "include",
-      })
+      "http://api.test/storage/asset-1.png"
     );
     expect(result).toBe(fakeUrl);
   });
@@ -511,13 +502,13 @@ describe("fetchImageViaProxy", () => {
     }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const asset = { id: "asset-2", generationId: "gen-2" } as any;
+    const asset = { id: "asset-2", generationId: "gen-2", url: "/storage/asset-2.png" } as any;
     await expect(
-      fetchImageViaProxy("http://api.test" as any, asset)
-    ).rejects.toThrow("Failed to fetch image via proxy: 404");
+      fetchAssetImage("http://api.test" as any, asset)
+    ).rejects.toThrow("Failed to fetch image: 404");
   });
 
-  it("encodes special characters in URL", async () => {
+  it("uses the supplied desktop asset resolver", async () => {
     const fakeBlob = new Blob(["data"]);
     const fetchMock = vi.fn(async () => ({
       ok: true,
@@ -529,13 +520,12 @@ describe("fetchImageViaProxy", () => {
       revokeObjectURL: vi.fn(),
     });
 
-    const asset = { id: "a/b c", generationId: "g/1 2" } as any;
-    await fetchImageViaProxy("http://api.test" as any, asset);
+    const asset = { id: "a/b c", generationId: "g/1 2", url: "/storage/a.png" } as any;
+    const resolver = vi.fn(() => "asset://localhost/a.png");
+    await fetchAssetImage("http://api.test" as any, asset, resolver);
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "http://api.test/generations/g%2F1%202/assets/a%2Fb%20c/raw",
-      expect.any(Object)
-    );
+    expect(resolver).toHaveBeenCalledWith("http://api.test", asset);
+    expect(fetchMock).toHaveBeenCalledWith("asset://localhost/a.png");
   });
 });
 
@@ -1101,7 +1091,7 @@ describe("buildLayeredComposition", () => {
     const mocks = setupCanvasMocks({ allOpaque: true });
     cleanup = mocks.cleanup;
 
-    // Mock fetch for fetchImageViaProxy
+    // Mock fetch for fetchAssetImage
     const fakeBlob = new Blob(["image-data"]);
     const fetchMock = vi.fn(async () => ({
       ok: true,
@@ -1111,7 +1101,7 @@ describe("buildLayeredComposition", () => {
 
     const asset = { id: "l1", generationId: "g1", type: "image", itemIndex: 0, url: "/img.png", createdAt: "2025-01-01" } as any;
 
-    // No cached layerImages — will go through fetchImageViaProxy + loadLayerRenderInfo
+    // No cached layerImages — will go through fetchAssetImage + loadLayerRenderInfo
     // Since our mock Image has naturalWidth=200, naturalHeight=100, this should work
     const result = await buildLayeredComposition({
       layerAssets: [asset],
@@ -1174,7 +1164,7 @@ describe("buildLayeredComposition", () => {
     });
     cleanup = () => spy.mockRestore();
 
-    // Mock fetch for fetchImageViaProxy
+    // Mock fetch for fetchAssetImage
     const fakeBlob = new Blob(["image-data"]);
     const fetchMock = vi.fn(async () => ({
       ok: true,

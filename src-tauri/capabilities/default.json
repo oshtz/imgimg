@@ -17,6 +17,6 @@
     "core:window:allow-is-maximized",
     "window-state:default",
     "dialog:default",
-    "fs:default"
+    "fs:allow-write-text-file"
   ]
 }

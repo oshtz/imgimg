@@ -7,8 +7,9 @@ use std::sync::Arc;
 use crate::config::AppConfig;
 use crate::error::{AppError, AppResult};
 use crate::providers::comfy_pool::ComfyPool;
+use crate::providers::health::ProviderHealthService;
 use crate::services::event_hub::EventHub;
-use crate::services::queue::{ConcurrentQueue, FifoQueue};
+use crate::services::queue::GenerationQueue;
 use crate::services::storage::LocalStorage;
 
 /// Shared application state accessible from all Tauri commands.
@@ -19,10 +20,10 @@ pub struct AppState {
     pub storage_dir: PathBuf,
     pub http_client: reqwest::Client,
     pub event_hub: EventHub,
-    pub comfy_queue: Arc<FifoQueue>,
-    pub concurrent_queue: Arc<ConcurrentQueue>,
+    pub generation_queue: Arc<GenerationQueue>,
     pub storage: Arc<LocalStorage>,
     pub comfy_pool: Arc<ComfyPool>,
+    pub provider_health: ProviderHealthService,
     pub canvas_chat_cancellations: Arc<tokio::sync::Mutex<HashMap<String, Arc<AtomicBool>>>>,
 }
 
@@ -39,9 +40,8 @@ impl AppState {
             .build()
             .map_err(|e| AppError::Internal(format!("failed to create HTTP client: {e}")))?;
 
-        let concurrency = config.effective_comfy_urls().len().max(1);
-        let comfy_queue = Arc::new(FifoQueue::new(concurrency, event_hub.clone()));
-        let concurrent_queue = Arc::new(ConcurrentQueue::new(event_hub.clone()));
+        let concurrency = config.effective_comfy_urls().len().max(4);
+        let generation_queue = Arc::new(GenerationQueue::new(concurrency, event_hub.clone()));
         let storage = Arc::new(LocalStorage::new(storage_dir.clone()));
         let comfy_pool = Arc::new(ComfyPool::new(
             &config,
@@ -49,6 +49,7 @@ impl AppState {
             storage.clone(),
             event_hub.clone(),
         ));
+        let provider_health = ProviderHealthService::new();
 
         Ok(Self {
             db,
@@ -57,10 +58,10 @@ impl AppState {
             storage_dir,
             http_client,
             event_hub,
-            comfy_queue,
-            concurrent_queue,
+            generation_queue,
             storage,
             comfy_pool,
+            provider_health,
             canvas_chat_cancellations: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
         })
     }

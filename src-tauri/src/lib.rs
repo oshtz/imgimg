@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments, clippy::type_complexity)]
+
 pub mod commands;
 pub mod config;
 pub mod db;
@@ -12,18 +14,18 @@ use sqlx::sqlite::SqlitePoolOptions;
 use std::path::{Path, PathBuf};
 use tauri::Manager;
 
-use crate::config::{db_path, load_config, storage_dir};
+use crate::config::{db_path, load_config, save_config, storage_dir};
 use crate::db::migrations::run_migrations;
 use crate::services::event_hub::EventHub;
 use crate::services::storage::migrate_to_flat_storage;
 use crate::state::AppState;
-use crate::stores::workflow_store;
+use crate::stores::{admin_settings, generation_store, workflow_store};
 
 // Import all commands
 use crate::commands::{
-    admin::*, asset_types::*, canvas::*, compare::*, enhancer_presets::*, gallery::*,
+    admin::*, app_info::*, asset_types::*, canvas::*, compare::*, enhancer_presets::*, gallery::*,
     generations::*, health::*, models::*, presets::*, prompts::*, saved_prompts::*, storage::*,
-    updater::*, workflow_org::*, workflows::*,
+    workflow_org::*, workflows::*, workspace_state::*,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -48,11 +50,11 @@ pub fn run() {
             let data_dir = app_handle
                 .path()
                 .app_data_dir()
-                .expect("failed to resolve app data dir");
+                .map_err(|error| format!("failed to resolve app data dir: {error}"))?;
             std::fs::create_dir_all(&data_dir)?;
 
             // Load config
-            let config = load_config(&data_dir).expect("failed to load config");
+            let mut config = load_config(&data_dir)?;
 
             // Ensure storage directory exists
             let storage = storage_dir(&data_dir);
@@ -66,15 +68,23 @@ pub fn run() {
                 let pool = SqlitePoolOptions::new()
                     .max_connections(5)
                     .connect(&db_url)
-                    .await
-                    .expect("failed to connect to SQLite database");
+                    .await?;
 
                 // Always run migrations — they use CREATE TABLE IF NOT EXISTS
                 // and also set PRAGMAs (WAL mode, foreign keys) that need to
                 // be active for every connection.
-                run_migrations(&pool)
-                    .await
-                    .expect("failed to run database migrations");
+                run_migrations(&pool, Some(&db_file)).await?;
+
+                let interrupted = generation_store::reconcile_interrupted_jobs(&pool).await?;
+                if interrupted > 0 {
+                    log::warn!("Marked {interrupted} unfinished generation jobs as interrupted");
+                }
+
+                let config_changed =
+                    admin_settings::migrate_legacy_secrets(&pool, &mut config).await?;
+                if config_changed {
+                    save_config(&data_dir, &config)?;
+                }
 
                 let project_root = std::env::current_dir().ok();
 
@@ -104,15 +114,15 @@ pub fn run() {
                     log::warn!("No workflow directory found; skipping disk sync");
                 }
 
-                pool
-            });
+                Ok::<_, crate::error::AppError>(pool)
+            })?;
 
             let event_hub = EventHub::new(app_handle.clone());
             let state = AppState::new(pool, config, data_dir, storage, event_hub)
                 .map_err(|e| Box::<dyn std::error::Error>::from(e.to_string()))?;
 
             // Start the queue pump in the async runtime
-            let queue = state.comfy_queue.clone();
+            let queue = state.generation_queue.clone();
             tauri::async_runtime::spawn(async move {
                 queue.start();
             });
@@ -165,12 +175,14 @@ pub fn run() {
             get_generation,
             list_generations,
             delete_generation,
+            cancel_generation,
+            retry_generation,
             get_asset_versions,
             set_active_asset_version,
             update_generation_status,
             regenerate_item,
             create_inpaint,
-            download_generation_assets_zip,
+            export_generation_assets_zip,
             remove_background,
             // Gallery
             list_gallery,
@@ -191,16 +203,9 @@ pub fn run() {
             // Admin
             get_admin_settings,
             update_admin_settings,
+            verify_provider_credential,
             get_feature_workflow_config,
             get_default_system_prompts,
-            get_openrouter_api_key,
-            set_openrouter_api_key,
-            get_replicate_api_key,
-            set_replicate_api_key,
-            get_fal_api_key,
-            set_fal_api_key,
-            get_kie_api_key,
-            set_kie_api_key,
             // Models / LoRA
             list_available_loras,
             get_lora_settings,
@@ -236,15 +241,12 @@ pub fn run() {
             upsert_saved_prompt,
             delete_saved_prompt,
             // Storage
-            get_storage_file,
             get_storage_base_path,
-            upload_to_storage,
             open_storage_folder,
             open_external_url,
-            // Portable updater
+            get_workspace_state,
+            save_workspace_state,
             get_app_info,
-            check_portable_update,
-            install_portable_update,
             // Compare
             get_compare_models,
             get_compare_groups,

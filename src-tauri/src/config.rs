@@ -36,7 +36,7 @@ pub struct AppConfig {
     pub openrouter_image_model: String,
 
     // Replicate
-    #[serde(default)]
+    #[serde(default, skip_serializing)]
     pub replicate_api_token: Option<String>,
     #[serde(default = "default_replicate_poll_interval_ms")]
     pub replicate_poll_interval_ms: u64,
@@ -44,7 +44,7 @@ pub struct AppConfig {
     pub replicate_timeout_ms: u64,
 
     // fal.ai
-    #[serde(default)]
+    #[serde(default, skip_serializing)]
     pub fal_api_key: Option<String>,
     #[serde(default = "default_fal_timeout_ms")]
     pub fal_timeout_ms: u64,
@@ -52,7 +52,7 @@ pub struct AppConfig {
     pub fal_poll_interval_ms: u64,
 
     // Kie.ai
-    #[serde(default)]
+    #[serde(default, skip_serializing)]
     pub kie_api_key: Option<String>,
     #[serde(default = "default_kie_timeout_ms")]
     pub kie_timeout_ms: u64,
@@ -146,6 +146,12 @@ pub fn load_config(data_dir: &Path) -> AppResult<AppConfig> {
         std::fs::write(&config_path, json)?;
         Ok(config)
     }
+}
+
+pub fn save_config(data_dir: &Path, config: &AppConfig) -> AppResult<()> {
+    let json = serde_json::to_string_pretty(config)?;
+    std::fs::write(data_dir.join("config.json"), json)?;
+    Ok(())
 }
 
 /// Resolve the storage directory within app data dir.

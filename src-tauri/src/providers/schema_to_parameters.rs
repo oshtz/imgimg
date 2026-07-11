@@ -39,8 +39,14 @@ pub struct SchemaConversionResult {
 
 /// Skipped parameter names (file inputs).
 const SKIP_PATTERNS: &[&str] = &[
-    "image_url", "image", "audio", "video", "mask", "reference_audio",
-    "input_image", "init_image",
+    "image_url",
+    "image",
+    "audio",
+    "video",
+    "mask",
+    "reference_audio",
+    "input_image",
+    "init_image",
 ];
 
 /// Convert OpenAPI schema properties to WorkflowParameter list.
@@ -53,11 +59,13 @@ pub fn convert_schema_to_parameters(
 
     let props = match properties.as_object() {
         Some(p) => p,
-        None => return SchemaConversionResult {
-            parameters,
-            file_input_keys,
-            output_mode: "single_image".to_string(),
-        },
+        None => {
+            return SchemaConversionResult {
+                parameters,
+                file_input_keys,
+                output_mode: "single_image".to_string(),
+            }
+        }
     };
 
     let mut entries: Vec<_> = props.iter().collect();
@@ -83,15 +91,24 @@ pub fn convert_schema_to_parameters(
 
         let schema_type = schema.get("type").and_then(|t| t.as_str()).unwrap_or("");
         let label = name.replace('_', " ");
-        let description = schema.get("description").and_then(|d| d.as_str()).map(|s| s.to_string());
-        let default_val = schema.get("default").cloned().unwrap_or(serde_json::Value::Null);
+        let description = schema
+            .get("description")
+            .and_then(|d| d.as_str())
+            .map(|s| s.to_string());
+        let default_val = schema
+            .get("default")
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
 
         // Check for enum
         if let Some(enum_vals) = schema.get("enum").and_then(|e| e.as_array()) {
             let options: Vec<ParameterOption> = enum_vals
                 .iter()
                 .map(|v| ParameterOption {
-                    label: v.as_str().map(|s| s.to_string()).unwrap_or_else(|| v.to_string()),
+                    label: v
+                        .as_str()
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| v.to_string()),
                     value: v.clone(),
                 })
                 .collect();
@@ -114,7 +131,11 @@ pub fn convert_schema_to_parameters(
             "number" | "integer" => {
                 let min = schema.get("minimum").and_then(|v| v.as_f64());
                 let max = schema.get("maximum").and_then(|v| v.as_f64());
-                let step = if schema_type == "integer" { Some(1.0) } else { None };
+                let step = if schema_type == "integer" {
+                    Some(1.0)
+                } else {
+                    None
+                };
 
                 parameters.push(WorkflowParameter {
                     name: name.to_string(),

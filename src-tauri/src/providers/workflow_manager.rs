@@ -52,10 +52,7 @@ pub struct InjectParams {
 }
 
 /// Load a workflow template from the database.
-pub async fn load_template(
-    db: &SqlitePool,
-    workflow_id: &str,
-) -> AppResult<serde_json::Value> {
+pub async fn load_template(db: &SqlitePool, workflow_id: &str) -> AppResult<serde_json::Value> {
     // Strip .json suffix if present
     let id = workflow_id.strip_suffix(".json").unwrap_or(workflow_id);
 
@@ -89,10 +86,7 @@ pub fn detect_engine(template: &serde_json::Value) -> Engine {
 }
 
 /// Inject parameters into a workflow template by replacing tokens.
-pub fn inject(
-    template: &serde_json::Value,
-    params: &InjectParams,
-) -> serde_json::Value {
+pub fn inject(template: &serde_json::Value, params: &InjectParams) -> serde_json::Value {
     let mut result = walk(template, params);
     // When no LoRA is selected, bypass LoRA loader nodes by rewiring
     // downstream references to point at the loader's own inputs.
@@ -121,10 +115,14 @@ fn strip_lora_nodes(workflow: &mut serde_json::Value) {
     // Find LoRA loader nodes: they still contain the un-injected "__LORA_NAME__" token.
     let mut lora_nodes: Vec<String> = Vec::new();
     // Map from (lora_node_id, output_index) -> the input link to remap to.
-    let mut rewire_map: std::collections::HashMap<(String, u64), serde_json::Value> = std::collections::HashMap::new();
+    let mut rewire_map: std::collections::HashMap<(String, u64), serde_json::Value> =
+        std::collections::HashMap::new();
 
     for (node_id, node) in obj {
-        let class = node.get("class_type").and_then(|v| v.as_str()).unwrap_or("");
+        let class = node
+            .get("class_type")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
         let is_lora = class.to_lowercase().contains("lora");
         if !is_lora {
             continue;
@@ -134,7 +132,8 @@ fn strip_lora_nodes(workflow: &mut serde_json::Value) {
             None => continue,
         };
         // Check if this node still has the un-injected __LORA_NAME__ token
-        let has_uninjected = inputs.get("lora_name")
+        let has_uninjected = inputs
+            .get("lora_name")
             .and_then(|v| v.as_str())
             .map(|s| s == "__LORA_NAME__")
             .unwrap_or(false);
@@ -197,10 +196,7 @@ fn rewire_link(
 }
 
 /// Validate that no required tokens remain in an injected workflow.
-pub fn validate_injected(
-    workflow: &serde_json::Value,
-    engine: &Engine,
-) -> AppResult<()> {
+pub fn validate_injected(workflow: &serde_json::Value, engine: &Engine) -> AppResult<()> {
     // Skip validation for non-ComfyUI engines
     if *engine != Engine::ComfyUI {
         return Ok(());
@@ -385,7 +381,10 @@ fn replace_tokens_in_string(s: &str, params: &InjectParams) -> String {
 
     result = result.replace("__PROMPT__", &params.prompt);
     result = result.replace("__SEED__", &params.seed.to_string());
-    result = result.replace("__BATCH_SIZE__", &params.batch_size.unwrap_or(1).to_string());
+    result = result.replace(
+        "__BATCH_SIZE__",
+        &params.batch_size.unwrap_or(1).to_string(),
+    );
 
     if let Some(v) = params.item_index {
         result = result.replace("__ITEM_INDEX__", &v.to_string());
@@ -460,7 +459,11 @@ pub fn aspect_ratio_to_size(ar: &str) -> Option<(i64, i64)> {
 
     let round_to_multiple = |n: f64| -> f64 {
         let r = (n / MULTIPLE).round() * MULTIPLE;
-        if r < MULTIPLE { MULTIPLE } else { r }
+        if r < MULTIPLE {
+            MULTIPLE
+        } else {
+            r
+        }
     };
 
     let s = ratio.sqrt();
@@ -547,7 +550,9 @@ mod aspect_ratio_tests {
 
     #[test]
     fn dimensions_are_multiples_of_64() {
-        for ar in ["1:1", "16:9", "9:16", "4:5", "5:4", "16:10", "1:2", "8:1", "1:8"] {
+        for ar in [
+            "1:1", "16:9", "9:16", "4:5", "5:4", "16:10", "1:2", "8:1", "1:8",
+        ] {
             let (w, h) = aspect_ratio_to_size(ar).expect(ar);
             assert_eq!(w % 64, 0, "{ar} width {w} not multiple of 64");
             assert_eq!(h % 64, 0, "{ar} height {h} not multiple of 64");

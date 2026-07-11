@@ -175,6 +175,9 @@ export function GenerationsSection({ apiBaseUrl }: GenerationsSectionProps) {
     const counts: Record<GenerationStatus, number> = {
       queued: 0,
       running: 0,
+      cancel_requested: 0,
+      cancelled: 0,
+      interrupted: 0,
       succeeded: 0,
       failed: 0
     };

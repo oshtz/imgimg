@@ -17,7 +17,6 @@ import {
   type WorkflowFolder,
 } from "../client";
 import { AssetTypeRegistry, EMPTY_REGISTRY } from "../assetTypeRegistry";
-import { loadBundledWorkflows } from "../lib/onboarding";
 
 export function useWorkflowManager(apiBaseUrl: ApiBaseUrl) {
   const [workflowsRemote, setWorkflowsRemote] = useState<WorkflowSummary[]>([]);
@@ -26,20 +25,20 @@ export function useWorkflowManager(apiBaseUrl: ApiBaseUrl) {
   const [workflowPreviewsFromApi, setWorkflowPreviewsFromApi] = useState<Record<string, string>>({});
   const [providerStatus, setProviderStatus] = useState<ProviderStatus | null>(null);
   const [assetTypeRegistry, setAssetTypeRegistry] = useState<AssetTypeRegistry>(EMPTY_REGISTRY);
+  const [workflowError, setWorkflowError] = useState<string | null>(null);
 
   const refreshWorkflows = useCallback(async () => {
     try {
       const result = await getWorkflows(apiBaseUrl);
+      setWorkflowError(null);
       setWorkflowsRemote(result.workflows);
       setPinnedWorkflowIds(result.pinnedWorkflowIds);
       setWorkflowOrg(result.organization);
       if (result.providerStatus) {
         setProviderStatus(result.providerStatus);
       }
-    } catch {
-      setWorkflowsRemote([]);
-      setPinnedWorkflowIds([]);
-      setWorkflowOrg(null);
+    } catch (error) {
+      setWorkflowError(error instanceof Error ? error.message : "Could not load workflows");
     }
   }, [apiBaseUrl]);
 
@@ -134,10 +133,16 @@ export function useWorkflowManager(apiBaseUrl: ApiBaseUrl) {
 
   // Initial load
   useEffect(() => {
-    void loadBundledWorkflows().then(() => refreshWorkflows());
+    void refreshWorkflows();
     void refreshAssetTypes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiBaseUrl]);
+
+  useEffect(() => {
+    const refresh = () => { void refreshWorkflows(); };
+    window.addEventListener("api-key-changed", refresh);
+    return () => window.removeEventListener("api-key-changed", refresh);
+  }, [refreshWorkflows]);
 
   return {
     workflowsRemote,
@@ -146,6 +151,7 @@ export function useWorkflowManager(apiBaseUrl: ApiBaseUrl) {
     workflowPreviewsFromApi,
     providerStatus,
     assetTypeRegistry,
+    workflowError,
     refreshWorkflows,
     refreshAssetTypes,
     refreshWorkflowPreviews,

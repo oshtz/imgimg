@@ -61,7 +61,10 @@ pub async fn chat(
     let temp = temperature.unwrap_or(0.7);
 
     if cancellation.load(Ordering::Relaxed) {
-        log::info!("canvas_chat request_id={} cancelled before provider request", request_id);
+        log::info!(
+            "canvas_chat request_id={} cancelled before provider request",
+            request_id
+        );
         return Ok(String::new());
     }
 
@@ -706,7 +709,10 @@ mod tests {
 
         assert_eq!(
             parameters["required"].as_array().unwrap(),
-            &vec![serde_json::json!("workflow_id"), serde_json::json!("prompt")]
+            &vec![
+                serde_json::json!("workflow_id"),
+                serde_json::json!("prompt")
+            ]
         );
         assert!(parameters["properties"].get("count").is_none());
     }
@@ -718,7 +724,10 @@ mod tests {
 
         assert_eq!(
             parameters["required"].as_array().unwrap(),
-            &vec![serde_json::json!("workflow_id"), serde_json::json!("prompt")]
+            &vec![
+                serde_json::json!("workflow_id"),
+                serde_json::json!("prompt")
+            ]
         );
         assert!(parameters["properties"].get("count").is_none());
     }

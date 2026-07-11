@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TbCloudOff, TbFolder, TbLayoutBoard, TbMusic, TbPlus } from "react-icons/tb";
 import type { WorkflowSummary, WorkflowOrganization } from "../api";
 import type { CanvasMeta } from "../canvas/canvasStorage";
-import type { CardSize, CardThumbnailMode } from "./SettingsPanel";
+import type { CardSize, CardThumbnailMode } from "./preferences";
 
 /** Grid column classes per card size */
 const GRID_CLASSES: Record<CardSize, string> = {

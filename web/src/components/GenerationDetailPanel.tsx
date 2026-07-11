@@ -52,6 +52,8 @@ export function GenerationDetailPanel(props: {
   onClose: () => void;
   onSelectAssetKey: (next: string | null) => void;
   onDeleteGeneration: (generationId: string) => void;
+  onCancelGeneration: (generationId: string) => void;
+  onRetryGeneration: (generationId: string) => void;
   onUsePrompt: (prompt: string, imageInputUrl?: string | null, imageInputUrls?: string[]) => void;
   onGenerateAgain: (g: Generation) => void;
   /** Callback to regenerate an asset. For items, pass itemIndex; for album/background, itemIndex is ignored. */
@@ -960,6 +962,30 @@ export function GenerationDetailPanel(props: {
                     <span className="font-mono text-zinc-500 dark:text-zinc-500 truncate ml-4 text-right">{generation.id}</span>
                   </div>
                 </div>
+
+                {generation.status === "queued" || generation.status === "running" || generation.status === "cancel_requested" ? (
+                  <button
+                    type="button"
+                    onClick={() => props.onCancelGeneration(generation.id)}
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-200 py-2 text-xs text-amber-700 transition-colors hover:bg-amber-50 disabled:opacity-50 dark:border-amber-900 dark:text-amber-300 dark:hover:bg-amber-950/20"
+                    disabled={props.loading || generation.status === "cancel_requested"}
+                  >
+                    <TbX className="h-3.5 w-3.5" />
+                    {generation.status === "cancel_requested" ? "Cancelling…" : "Cancel generation"}
+                  </button>
+                ) : null}
+
+                {generation.status === "failed" || generation.status === "cancelled" || generation.status === "interrupted" ? (
+                  <button
+                    type="button"
+                    onClick={() => props.onRetryGeneration(generation.id)}
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 py-2 text-xs text-zinc-600 transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                    disabled={props.loading}
+                  >
+                    <TbRefresh className="h-3.5 w-3.5" />
+                    Retry as new generation
+                  </button>
+                ) : null}
 
                 <button
                   type="button"

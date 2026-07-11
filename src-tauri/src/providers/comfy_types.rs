@@ -95,6 +95,8 @@ pub fn flatten_images(item: &ComfyHistoryItem) -> Vec<ComfyImageRef> {
 
 /// Parse SaveImage node mappings from a ComfyUI workflow.
 pub fn parse_save_node_mappings(workflow: &serde_json::Value) -> Vec<SaveNodeMapping> {
+    static ITEM_PATTERN: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    let item_pattern = ITEM_PATTERN.get_or_init(|| regex::Regex::new(r"(?i)Item(\d+)").unwrap());
     // Unwrap workflow.prompt if it exists
     let nodes = if let Some(prompt) = workflow.get("prompt") {
         prompt
@@ -139,8 +141,7 @@ pub fn parse_save_node_mappings(workflow: &serde_json::Value) -> Vec<SaveNodeMap
             });
         } else {
             // Match Item<N> pattern
-            let re = regex::Regex::new(r"(?i)Item(\d+)").unwrap();
-            if let Some(caps) = re.captures(title) {
+            if let Some(caps) = item_pattern.captures(title) {
                 if let Ok(num) = caps[1].parse::<i64>() {
                     let item_index = num - 1; // 1-based → 0-based
                     mappings.push(SaveNodeMapping {
@@ -155,15 +156,6 @@ pub fn parse_save_node_mappings(workflow: &serde_json::Value) -> Vec<SaveNodeMap
     }
 
     mappings
-}
-
-/// Replace the extension of a filename.
-pub(crate) fn replace_extension(filename: &str, new_ext: &str) -> String {
-    if let Some(dot_pos) = filename.rfind('.') {
-        format!("{}.{}", &filename[..dot_pos], new_ext)
-    } else {
-        format!("{}.{}", filename, new_ext)
-    }
 }
 
 #[cfg(test)]
@@ -283,34 +275,6 @@ mod tests {
     }
 
     // ── replace_extension ──
-
-    #[test]
-    fn replace_extension_png_to_webp() {
-        assert_eq!(replace_extension("photo.png", "webp"), "photo.webp");
-    }
-
-    #[test]
-    fn replace_extension_jpg_to_png() {
-        assert_eq!(replace_extension("image.jpg", "png"), "image.png");
-    }
-
-    #[test]
-    fn replace_extension_no_extension() {
-        assert_eq!(replace_extension("filename", "webp"), "filename.webp");
-    }
-
-    #[test]
-    fn replace_extension_multiple_dots() {
-        assert_eq!(
-            replace_extension("my.photo.backup.png", "webp"),
-            "my.photo.backup.webp"
-        );
-    }
-
-    #[test]
-    fn replace_extension_empty_filename() {
-        assert_eq!(replace_extension("", "png"), ".png");
-    }
 
     // ── flatten_images ──
 

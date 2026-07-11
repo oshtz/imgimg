@@ -1,4 +1,4 @@
-import type { ProviderStatus } from "../api";
+import type { ProviderConnectionState, ProviderStatus } from "../api";
 
 interface ProviderStatusIndicatorProps {
   status: ProviderStatus | null;
@@ -9,36 +9,41 @@ interface ProviderStatusIndicatorProps {
 }
 
 interface StatusDotProps {
-  available: boolean;
+  state: ProviderConnectionState;
   label: string;
   details?: string;
   compact?: boolean;
-  /** Use a muted/dark red to indicate "configured but offline" rather than outright unavailable */
-  offlineVariant?: boolean;
 }
 
-function StatusDot({ available, label, details, compact, offlineVariant }: StatusDotProps) {
-  const dotColor = available
-    ? "bg-accent-forest"
-    : offlineVariant
-      ? "bg-accent-ember"
-      : "bg-accent-coral";
-  const dotGlow = available
-    ? "shadow-[0_0_4px_rgba(79,121,105,0.4),0_0_8px_rgba(79,121,105,0.15)]"
-    : offlineVariant
-      ? "shadow-[0_0_4px_rgba(163,69,69,0.4),0_0_8px_rgba(163,69,69,0.15)]"
-      : "shadow-[0_0_4px_rgba(216,105,105,0.4),0_0_8px_rgba(216,105,105,0.15)]";
-  const textColor = available
-    ? "text-accent-forest"
-    : offlineVariant
-      ? "text-accent-ember"
-      : "text-accent-coral";
+function normalizedState(
+  status: { available: boolean; hasApiKey: boolean; state?: ProviderConnectionState },
+): ProviderConnectionState {
+  return status.state ?? (!status.hasApiKey ? "unconfigured" : status.available ? "verified" : "configured_unverified");
+}
 
-  const tooltip = details ? `${label}: ${details}` : `${label}: ${available ? "Available" : "Unavailable"}`;
+function stateLabel(state: ProviderConnectionState) {
+  switch (state) {
+    case "verified": return "Connected";
+    case "configured_unverified": return "Configured, not verified";
+    case "unconfigured": return "No API key";
+    case "invalid": return "Invalid credentials";
+    case "unreachable": return "Could not verify";
+  }
+}
+
+function StatusDot({ state, label, details, compact }: StatusDotProps) {
+  const healthy = state === "verified";
+  const warning = state === "configured_unverified" || state === "unreachable";
+  const dotColor = healthy ? "bg-accent-forest" : warning ? "bg-amber-500" : state === "unconfigured" ? "bg-zinc-500" : "bg-accent-coral";
+  const dotGlow = healthy
+    ? "shadow-[0_0_4px_rgba(79,121,105,0.4),0_0_8px_rgba(79,121,105,0.15)]"
+    : warning ? "shadow-[0_0_4px_rgba(245,158,11,0.4)]" : "";
+  const textColor = healthy ? "text-accent-forest" : warning ? "text-amber-600 dark:text-amber-400" : state === "unconfigured" ? "text-zinc-500" : "text-accent-coral";
+  const tooltip = `${label}: ${details ?? stateLabel(state)}`;
 
   return (
-    <div className="group relative flex items-center gap-1.5" title={tooltip}>
-      <div className={`h-1.5 w-1.5 rounded-full transition-all duration-500 ${dotColor} ${dotGlow}`} />
+    <div className="group relative flex items-center gap-1.5" title={tooltip} aria-label={tooltip}>
+      <div aria-hidden="true" className={`h-1.5 w-1.5 rounded-full transition-all duration-500 ${dotColor} ${dotGlow}`} />
       {!compact && (
         <span className={`text-xs ${textColor}`}>
           {label}
@@ -64,54 +69,33 @@ export function ProviderStatusIndicator({ status, loading, compact, className = 
     ? `${status.comfyui.healthyCount}/${status.comfyui.totalCount} instances healthy`
     : "Unavailable";
 
-  const openrouterDetails = !status?.openrouter.hasApiKey
-    ? "API Key Not Set"
-    : status.openrouter.available
-      ? "Connected"
-      : "Unavailable";
-
-  const replicateDetails = !status?.replicate.hasApiKey
-    ? "API Key Not Set"
-    : status.replicate.available
-      ? "Connected"
-      : "Unavailable";
-
-  const falDetails = !status?.fal?.hasApiKey
-    ? "API Key Not Set"
-    : status.fal?.available
-      ? "Connected"
-      : "Unavailable";
-
-  const kieDetails = !status?.kie?.hasApiKey
-    ? "API Key Not Set"
-    : status.kie?.available
-      ? "Connected"
-      : "Unavailable";
+  const openrouterState = status ? normalizedState(status.openrouter) : "unconfigured";
+  const replicateState = status ? normalizedState(status.replicate) : "unconfigured";
+  const falState = status ? normalizedState(status.fal) : "unconfigured";
+  const kieState = status ? normalizedState(status.kie) : "unconfigured";
 
   // Check if any provider is unavailable (excluding missing API keys)
   const hasIssues = status && (
     (!status.comfyui.available) ||
-    (!status.openrouter.available && status.openrouter.hasApiKey) ||
-    (!status.replicate.available && status.replicate.hasApiKey) ||
-    (status.fal && !status.fal.available && status.fal.hasApiKey) ||
-    (status.kie && !status.kie.available && status.kie.hasApiKey)
+    ([openrouterState, replicateState, falState, kieState] as ProviderConnectionState[])
+      .some((state) => state === "invalid" || state === "unreachable")
   );
 
   const dots = status ? [
     isEnabled("comfyui") && (
-      <StatusDot key="comfyui" available={status.comfyui.available} label="ComfyUI" details={comfyDetails} compact={compact} offlineVariant={!status.comfyui.available} />
+      <StatusDot key="comfyui" state={status.comfyui.available ? "verified" : "unreachable"} label="ComfyUI" details={comfyDetails} compact={compact} />
     ),
     isEnabled("openrouter") && (
-      <StatusDot key="openrouter" available={status.openrouter.available} label="OpenRouter" details={openrouterDetails} compact={compact} />
+      <StatusDot key="openrouter" state={openrouterState} label="OpenRouter" compact={compact} />
     ),
     isEnabled("replicate") && (
-      <StatusDot key="replicate" available={status.replicate.available} label="Replicate" details={replicateDetails} compact={compact} />
+      <StatusDot key="replicate" state={replicateState} label="Replicate" compact={compact} />
     ),
     isEnabled("fal") && status.fal && (
-      <StatusDot key="fal" available={status.fal.available} label="fal.ai" details={falDetails} compact={compact} />
+      <StatusDot key="fal" state={falState} label="fal.ai" compact={compact} />
     ),
     isEnabled("kie") && status.kie && (
-      <StatusDot key="kie" available={status.kie.available} label="kie.ai" details={kieDetails} compact={compact} />
+      <StatusDot key="kie" state={kieState} label="kie.ai" compact={compact} />
     ),
   ].filter(Boolean) : [];
 
@@ -156,16 +140,16 @@ export function ProviderStatusBanner({ status, loading, className = "" }: Omit<P
   if (!status.comfyui.available) {
     unavailableProviders.push("ComfyUI");
   }
-  if (!status.openrouter.available && status.openrouter.hasApiKey) {
+  if (["invalid", "unreachable"].includes(normalizedState(status.openrouter))) {
     unavailableProviders.push("OpenRouter");
   }
-  if (!status.replicate.available && status.replicate.hasApiKey) {
+  if (["invalid", "unreachable"].includes(normalizedState(status.replicate))) {
     unavailableProviders.push("Replicate");
   }
-  if (status.fal && !status.fal.available && status.fal.hasApiKey) {
+  if (status.fal && ["invalid", "unreachable"].includes(normalizedState(status.fal))) {
     unavailableProviders.push("fal.ai");
   }
-  if (status.kie && !status.kie.available && status.kie.hasApiKey) {
+  if (status.kie && ["invalid", "unreachable"].includes(normalizedState(status.kie))) {
     unavailableProviders.push("kie.ai");
   }
 

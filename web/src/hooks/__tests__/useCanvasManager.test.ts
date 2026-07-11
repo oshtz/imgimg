@@ -7,7 +7,7 @@ const mockListCanvasesAsync = vi.fn(async () => [] as any[]);
 const mockCreateCanvas = vi.fn((name: string) => ({
   id: `canvas_123`,
   name,
-  createdAt: new Date().toISOString(),
+  createdAt: "2026-01-01",
 }));
 const mockDeleteCanvas = vi.fn();
 const mockRenameCanvas = vi.fn();
@@ -25,7 +25,15 @@ vi.mock("../../canvas/canvasStorage", () => ({
 }));
 
 const mockIsTauri = vi.hoisted(() => ({ value: false }));
-vi.mock("../../tauri-api", () => ({ isTauri: () => mockIsTauri.value }));
+const mockTauriCreateCanvas = vi.hoisted(() => vi.fn());
+const mockTauriSaveCanvasState = vi.hoisted(() => vi.fn());
+const mockTauriGetCanvasState = vi.hoisted(() => vi.fn<() => Promise<any>>(async () => null));
+vi.mock("../../tauri-api", () => ({
+  isTauri: () => mockIsTauri.value,
+  createCanvas: mockTauriCreateCanvas,
+  saveCanvasState: mockTauriSaveCanvasState,
+  getCanvasState: mockTauriGetCanvasState,
+}));
 vi.mock("../../client", () => ({
   getCanvasState: vi.fn(async () => ({
     nodes: [],
@@ -58,6 +66,7 @@ beforeEach(() => {
   mockListCanvases.mockReturnValue([]);
   mockListCanvasesAsync.mockResolvedValue([]);
   mockIsTauri.value = false;
+  mockTauriGetCanvasState.mockResolvedValue(null);
 });
 
 describe("useCanvasManager", () => {
@@ -67,15 +76,15 @@ describe("useCanvasManager", () => {
     expect(result.current.activeCanvasId).toBeNull();
   });
 
-  it("handleCanvasCreate creates canvas and sets active", () => {
+  it("handleCanvasCreate creates canvas and sets active", async () => {
     const { result } = renderCanvasManager();
 
     // After createCanvas, listCanvases returns the new canvas
     const newCanvas = { id: "canvas_123", name: "Canvas 1", createdAt: "2026-01-01" };
     mockListCanvases.mockReturnValue([newCanvas]);
 
-    act(() => {
-      result.current.handleCanvasCreate();
+    await act(async () => {
+      await result.current.handleCanvasCreate();
     });
 
     expect(mockCreateCanvas).toHaveBeenCalledWith("Canvas 1");
@@ -84,20 +93,20 @@ describe("useCanvasManager", () => {
     expect(mockSetActiveView).toHaveBeenCalledWith("canvas");
   });
 
-  it("handleCanvasDelete removes canvas", () => {
+  it("handleCanvasDelete removes canvas", async () => {
     const canvas1 = { id: "c1", name: "Canvas 1", createdAt: "2026-01-01" };
     const canvas2 = { id: "c2", name: "Canvas 2", createdAt: "2026-01-02" };
     const { result } = renderCanvasManager([canvas1, canvas2]);
 
-    act(() => {
-      result.current.handleCanvasDelete("c1");
+    await act(async () => {
+      await result.current.handleCanvasDelete("c1");
     });
 
     expect(mockDeleteCanvas).toHaveBeenCalledWith("c1");
     expect(result.current.canvases).toEqual([canvas2]);
   });
 
-  it("handleCanvasDelete switches to remaining canvas when active deleted", () => {
+  it("handleCanvasDelete switches to remaining canvas when active deleted", async () => {
     const canvas1 = { id: "c1", name: "Canvas 1", createdAt: "2026-01-01" };
     const canvas2 = { id: "c2", name: "Canvas 2", createdAt: "2026-01-02" };
     const { result } = renderCanvasManager([canvas1, canvas2]);
@@ -107,22 +116,22 @@ describe("useCanvasManager", () => {
       result.current.setActiveCanvasId("c1");
     });
 
-    act(() => {
-      result.current.handleCanvasDelete("c1");
+    await act(async () => {
+      await result.current.handleCanvasDelete("c1");
     });
 
     expect(result.current.activeCanvasId).toBe("c2");
   });
 
-  it("handleCanvasRename updates name", () => {
+  it("handleCanvasRename updates name", async () => {
     const canvas1 = { id: "c1", name: "Canvas 1", createdAt: "2026-01-01" };
     const renamedCanvas = { ...canvas1, name: "Renamed" };
     const { result } = renderCanvasManager([canvas1]);
 
     mockListCanvases.mockReturnValue([renamedCanvas]);
 
-    act(() => {
-      result.current.handleCanvasRename("c1", "Renamed");
+    await act(async () => {
+      await result.current.handleCanvasRename("c1", "Renamed");
     });
 
     expect(mockRenameCanvas).toHaveBeenCalledWith("c1", "Renamed");
@@ -142,7 +151,7 @@ describe("useCanvasManager", () => {
     expect(mockSetSidebarCollapsed).toHaveBeenCalled();
   });
 
-  it("handleCanvasDelete sets activeCanvasId to null and view to generate when no remaining canvases", () => {
+  it("handleCanvasDelete sets activeCanvasId to null and view to generate when no remaining canvases", async () => {
     const canvas1 = { id: "c1", name: "Canvas 1", createdAt: "2026-01-01" };
     const { result } = renderCanvasManager([canvas1]);
 
@@ -151,8 +160,8 @@ describe("useCanvasManager", () => {
       result.current.setActiveCanvasId("c1");
     });
 
-    act(() => {
-      result.current.handleCanvasDelete("c1");
+    await act(async () => {
+      await result.current.handleCanvasDelete("c1");
     });
 
     expect(result.current.activeCanvasId).toBeNull();
@@ -160,7 +169,7 @@ describe("useCanvasManager", () => {
     expect(mockSetActiveView).toHaveBeenCalledWith("generate");
   });
 
-  it("handleCanvasDelete does not change activeCanvasId when deleting non-active canvas", () => {
+  it("handleCanvasDelete does not change activeCanvasId when deleting non-active canvas", async () => {
     const canvas1 = { id: "c1", name: "Canvas 1", createdAt: "2026-01-01" };
     const canvas2 = { id: "c2", name: "Canvas 2", createdAt: "2026-01-02" };
     const { result } = renderCanvasManager([canvas1, canvas2]);
@@ -171,22 +180,22 @@ describe("useCanvasManager", () => {
     });
 
     // Delete c2 (non-active)
-    act(() => {
-      result.current.handleCanvasDelete("c2");
+    await act(async () => {
+      await result.current.handleCanvasDelete("c2");
     });
 
     expect(result.current.activeCanvasId).toBe("c1");
     expect(result.current.canvases).toEqual([canvas1]);
   });
 
-  it("multiple canvas operations in sequence", () => {
+  it("multiple canvas operations in sequence", async () => {
     const { result } = renderCanvasManager();
 
     // Create first canvas
     const canvas1 = { id: "canvas_123", name: "Canvas 1", createdAt: "2026-01-01" };
     mockListCanvases.mockReturnValue([canvas1]);
-    act(() => {
-      result.current.handleCanvasCreate();
+    await act(async () => {
+      await result.current.handleCanvasCreate();
     });
     expect(result.current.canvases).toHaveLength(1);
     expect(result.current.activeCanvasId).toBe("canvas_123");
@@ -194,14 +203,14 @@ describe("useCanvasManager", () => {
     // Rename it
     const renamedCanvas = { ...canvas1, name: "My Canvas" };
     mockListCanvases.mockReturnValue([renamedCanvas]);
-    act(() => {
-      result.current.handleCanvasRename("canvas_123", "My Canvas");
+    await act(async () => {
+      await result.current.handleCanvasRename("canvas_123", "My Canvas");
     });
     expect(result.current.canvases[0].name).toBe("My Canvas");
 
     // Delete it
-    act(() => {
-      result.current.handleCanvasDelete("canvas_123");
+    await act(async () => {
+      await result.current.handleCanvasDelete("canvas_123");
     });
     expect(result.current.canvases).toEqual([]);
     expect(result.current.activeCanvasId).toBeNull();
@@ -316,14 +325,6 @@ describe("useCanvasManager", () => {
       mockIsTauri.value = true;
 
       // No local canvases in localStorage
-      // Mock Tauri APIs
-      vi.doMock("../../tauri-api", async () => ({
-        isTauri: () => true,
-        createCanvas: vi.fn(),
-        saveCanvasState: vi.fn(),
-        getCanvasState: vi.fn(async () => null),
-      }));
-
       mockListCanvasesAsync.mockResolvedValue([]);
 
       renderCanvasManager();
@@ -348,17 +349,6 @@ describe("useCanvasManager", () => {
         nextZIndex: 2,
       }));
 
-      const mockTauriCreateCanvas = vi.fn();
-      const mockTauriSaveCanvasState = vi.fn();
-      const mockTauriGetCanvasState = vi.fn(async () => null);
-
-      vi.doMock("../../tauri-api", async () => ({
-        isTauri: () => true,
-        createCanvas: mockTauriCreateCanvas,
-        saveCanvasState: mockTauriSaveCanvasState,
-        getCanvasState: mockTauriGetCanvasState,
-      }));
-
       const migratedList = [{ id: "lc1", name: "Local Canvas 1", createdAt: "2026-01-01" }];
       mockListCanvasesAsync.mockResolvedValue(migratedList);
 
@@ -379,20 +369,11 @@ describe("useCanvasManager", () => {
       mockIsTauri.value = true;
 
       // No local canvases array
-      const mockTauriCreateCanvas = vi.fn();
-      const mockTauriSaveCanvasState = vi.fn();
-      const mockTauriGetCanvasState = vi.fn(async () => ({
+      mockTauriGetCanvasState.mockResolvedValue({
         nodes: [{ id: "n1", type: "image" }],
         chatMessages: [{ text: "hello" }],
         nextZIndex: 3,
-      }));
-
-      vi.doMock("../../tauri-api", async () => ({
-        isTauri: () => true,
-        createCanvas: mockTauriCreateCanvas,
-        saveCanvasState: mockTauriSaveCanvasState,
-        getCanvasState: mockTauriGetCanvasState,
-      }));
+      });
 
       const migratedCanvas = { id: "canvas_123", name: "Canvas (migrated)", createdAt: "2026-01-01" };
       mockCreateCanvas.mockReturnValue(migratedCanvas);
@@ -485,13 +466,6 @@ describe("useCanvasManager", () => {
     // Set invalid JSON for canvases
     localStorage.setItem("imgimg.canvases", "invalid json{{{");
 
-    vi.doMock("../../tauri-api", async () => ({
-      isTauri: () => true,
-      createCanvas: vi.fn(),
-      saveCanvasState: vi.fn(),
-      getCanvasState: vi.fn(async () => null),
-    }));
-
     mockListCanvasesAsync.mockResolvedValue([]);
 
     renderCanvasManager();
@@ -503,7 +477,7 @@ describe("useCanvasManager", () => {
     // Should not crash - the catch block returns []
   });
 
-  it("migration handles errors gracefully without crashing", async () => {
+  it("migration retries after an error instead of recording false success", async () => {
     localStorage.removeItem("imgimg.canvasMigrated");
 
     const { getCanvasState } = await import("../../client");
@@ -512,9 +486,8 @@ describe("useCanvasManager", () => {
     // Should not throw
     const { result } = renderCanvasManager();
 
-    await waitFor(() => {
-      expect(localStorage.getItem("imgimg.canvasMigrated")).toBe("1");
-    });
+    await waitFor(() => expect(getCanvasState).toHaveBeenCalled());
+    expect(localStorage.getItem("imgimg.canvasMigrated")).toBeNull();
 
     // App should still work
     expect(result.current.canvases).toEqual([]);

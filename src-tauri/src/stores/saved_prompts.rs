@@ -24,14 +24,16 @@ pub async fn list_prompts(pool: &SqlitePool) -> AppResult<Vec<SavedPrompt>> {
 
     Ok(rows
         .into_iter()
-        .map(|(id, name, text, sort_order, created_at, updated_at)| SavedPrompt {
-            id,
-            name,
-            text,
-            sort_order,
-            created_at,
-            updated_at,
-        })
+        .map(
+            |(id, name, text, sort_order, created_at, updated_at)| SavedPrompt {
+                id,
+                name,
+                text,
+                sort_order,
+                created_at,
+                updated_at,
+            },
+        )
         .collect())
 }
 
@@ -44,13 +46,8 @@ pub struct UpsertSavedPrompt {
     pub sort_order: Option<i64>,
 }
 
-pub async fn upsert_prompt(
-    pool: &SqlitePool,
-    input: UpsertSavedPrompt,
-) -> AppResult<SavedPrompt> {
-    let id = input
-        .id
-        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+pub async fn upsert_prompt(pool: &SqlitePool, input: UpsertSavedPrompt) -> AppResult<SavedPrompt> {
+    let id = input.id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     let sort_order = input.sort_order.unwrap_or(0);
 
     sqlx::query(
@@ -77,14 +74,16 @@ pub async fn upsert_prompt(
     .fetch_optional(pool)
     .await?;
 
-    row.map(|(id, name, text, sort_order, created_at, updated_at)| SavedPrompt {
-        id,
-        name,
-        text,
-        sort_order,
-        created_at,
-        updated_at,
-    })
+    row.map(
+        |(id, name, text, sort_order, created_at, updated_at)| SavedPrompt {
+            id,
+            name,
+            text,
+            sort_order,
+            created_at,
+            updated_at,
+        },
+    )
     .ok_or_else(|| crate::error::AppError::NotFound("Saved prompt not found".into()))
 }
 

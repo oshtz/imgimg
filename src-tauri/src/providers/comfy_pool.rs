@@ -17,7 +17,7 @@ pub enum PoolStrategy {
 }
 
 impl PoolStrategy {
-    pub fn from_str(s: &str) -> Self {
+    pub fn from_name(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "round_robin" | "roundrobin" => Self::RoundRobin,
             _ => Self::LeastBusy,
@@ -87,7 +87,7 @@ impl ComfyPool {
         event_hub: EventHub,
     ) -> Self {
         let urls = config.effective_comfy_urls();
-        let strategy = PoolStrategy::from_str(&config.comfy_pool_strategy);
+        let strategy = PoolStrategy::from_name(&config.comfy_pool_strategy);
         let primary_index = config.comfy_primary_index.min(urls.len().saturating_sub(1));
 
         let proxies: Vec<ComfyProxy> = urls

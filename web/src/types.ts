@@ -9,7 +9,7 @@ export type Model = {
   previewImageUrl: string;
 };
 
-export type GenerationStatus = "queued" | "running" | "succeeded" | "failed";
+export type GenerationStatus = "queued" | "running" | "cancel_requested" | "cancelled" | "interrupted" | "succeeded" | "failed";
 
 export type AssetType = "square" | "portrait" | "poster" | "landscape" | "horizontal" | "panoramic" | "video" | "audio" | "placeholder" | "preview" | "rembg" | (string & {});
 

@@ -51,18 +51,16 @@ function saveIndex(canvases: CanvasMeta[]) {
   localStorage.setItem(INDEX_KEY, JSON.stringify(canvases));
 }
 
-export function createCanvas(name: string): CanvasMeta {
+export async function createCanvas(name: string): Promise<CanvasMeta> {
   const id = `canvas_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const meta: CanvasMeta = { id, name, createdAt: new Date().toISOString() };
 
   if (isTauri()) {
     // Fire and forget — async create in SQLite
     // Replace optimistic entry with server-confirmed one when ready
-    tauriApi.createCanvas(id, name).then((m) => {
-      _cachedCanvases = _cachedCanvases.map((c) => c.id === id ? m : c);
-    });
-    _cachedCanvases = [..._cachedCanvases, meta];
-    return meta;
+    const saved = await tauriApi.createCanvas(id, name);
+    _cachedCanvases = [..._cachedCanvases, saved];
+    return saved;
   }
 
   const list = listCanvases();
@@ -71,9 +69,9 @@ export function createCanvas(name: string): CanvasMeta {
   return meta;
 }
 
-export function renameCanvas(id: string, name: string) {
+export async function renameCanvas(id: string, name: string): Promise<void> {
   if (isTauri()) {
-    tauriApi.renameCanvas(id, name);
+    await tauriApi.renameCanvas(id, name);
     _cachedCanvases = _cachedCanvases.map((c) =>
       c.id === id ? { ...c, name } : c
     );
@@ -87,9 +85,9 @@ export function renameCanvas(id: string, name: string) {
   }
 }
 
-export function deleteCanvas(id: string) {
+export async function deleteCanvas(id: string): Promise<void> {
   if (isTauri()) {
-    tauriApi.deleteCanvas(id);
+    await tauriApi.deleteCanvas(id);
     _cachedCanvases = _cachedCanvases.filter((c) => c.id !== id);
     return;
   }
@@ -123,11 +121,11 @@ export async function getCanvasStateAsync(id: string): Promise<unknown | null> {
   return getCanvasLocalState(id);
 }
 
-export function putCanvasLocalState(id: string, state: unknown) {
+export async function putCanvasLocalState(id: string, state: unknown): Promise<void> {
   if (isTauri()) {
     // Persist to SQLite via Tauri
     const s = state as any;
-    tauriApi.saveCanvasState({
+    await tauriApi.saveCanvasState({
       gameId: id,
       nodes: s.nodes ?? [],
       chatMessages: s.chatMessages ?? [],

@@ -1,5 +1,4 @@
-import { writePsd } from "ag-psd";
-import { buildAuthHeaders, type ApiBaseUrl } from "../../client";
+import type { ApiBaseUrl } from "../../client";
 import type { Asset } from "../../types";
 
 export type LayerUiState = {
@@ -89,10 +88,16 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-export async function fetchImageViaProxy(apiBaseUrl: ApiBaseUrl, asset: Asset): Promise<string> {
-  const proxyUrl = `${apiBaseUrl}/generations/${encodeURIComponent(asset.generationId)}/assets/${encodeURIComponent(asset.id)}/raw`;
-  const res = await fetch(proxyUrl, { headers: buildAuthHeaders(), credentials: "include" });
-  if (!res.ok) throw new Error(`Failed to fetch image via proxy: ${res.status}`);
+export async function fetchAssetImage(
+  apiBaseUrl: ApiBaseUrl,
+  asset: Asset,
+  assetUrl: (apiBaseUrl: ApiBaseUrl, asset: Asset) => string = (base, value) =>
+    value.url.startsWith("http") || value.url.startsWith("data:") || value.url.startsWith("blob:")
+      ? value.url
+      : `${base}${value.url}`,
+): Promise<string> {
+  const res = await fetch(assetUrl(apiBaseUrl, asset));
+  if (!res.ok) throw new Error(`Failed to fetch image: ${res.status}`);
   const blob = await res.blob();
   return URL.createObjectURL(blob);
 }
@@ -270,13 +275,13 @@ export async function buildLayeredComposition(params: {
   containerRect: DOMRect | null;
   layerImages?: Record<string, LayerImageInfo>;
 }) {
-  const { layerAssets, layerState, apiBaseUrl, containerRect, layerImages } = params;
+  const { layerAssets, layerState, assetUrl, apiBaseUrl, containerRect, layerImages } = params;
   if (layerAssets.length === 0) throw new Error("No layers available for export");
   const renderInfos = await Promise.all(
     layerAssets.map(async (layer) => {
       const cached = layerImages?.[layer.id];
       if (cached) return cached;
-      const blobUrl = await fetchImageViaProxy(apiBaseUrl, layer);
+      const blobUrl = await fetchAssetImage(apiBaseUrl, layer, assetUrl);
       try {
         return await loadLayerRenderInfo(blobUrl);
       } catch {
@@ -380,6 +385,7 @@ export async function exportComposition(
       hidden: !layer.state.visible
     };
   });
+  const { writePsd } = await import("ag-psd");
   const buffer = writePsd({
     width: composition.width,
     height: composition.height,

@@ -7,8 +7,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Azeret Mono"'],
-        mono: ['"Azeret Mono"'],
+        sans: ['"Azeret Mono Variable"', "ui-monospace", "monospace"],
+        mono: ['"Azeret Mono Variable"', "ui-monospace", "monospace"],
       },
       borderRadius: {
         none: '0',

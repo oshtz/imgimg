@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { TbX, TbKey, TbFileCode, TbCategory, TbPuzzle, TbPhoto, TbClock, TbAdjustments, TbRobot, TbSparkles, TbRocket, TbTool, TbInfoCircle } from "react-icons/tb";
 import { ApiKeysSection } from "./ApiKeysSection";
 import { WorkflowsSection } from "./WorkflowsSection";
@@ -10,8 +10,8 @@ import { CanvasAgentSection } from "./CanvasAgentSection";
 import { PromptEnhancerSection } from "./PromptEnhancerSection";
 import { FeatureWorkflowsSection } from "./FeatureWorkflowsSection";
 import type { ApiBaseUrl } from "../../api";
-import { getAppInfo, checkPortableUpdate, installPortableUpdate, type AppInfo, type PortableUpdateStatus } from "../../tauri-api";
-import type { ThemePreference, WidthPreference, CardSize, CardThumbnailMode, PromptPosition } from "../SettingsPanel";
+import { getAppInfo, type AppInfo } from "../../tauri-api";
+import type { ThemePreference, WidthPreference, CardSize, CardThumbnailMode, PromptPosition } from "../preferences";
 
 export type SettingsTab =
   | "getting-started"
@@ -126,6 +126,14 @@ function GettingStartedSection(props: {
             const status = providerStatus?.[p.key];
             const available = status?.available === true;
             const hasKey = status?.hasApiKey === true || available;
+            const state = status?.state ?? (!hasKey ? "unconfigured" : available ? "verified" : "configured_unverified");
+            const statusLabel = p.id === "comfyui"
+              ? available ? "Connected" : "Not running"
+              : state === "verified" ? "Connected"
+                : state === "configured_unverified" ? "Configured, not verified"
+                  : state === "invalid" ? "Invalid credentials"
+                    : state === "unreachable" ? "Could not verify"
+                      : "No API key";
             return (
               <div key={p.id} className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-3">
@@ -133,7 +141,7 @@ function GettingStartedSection(props: {
                   <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{p.label}</span>
                 </div>
                 <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {available ? "Connected" : hasKey ? "Key set" : p.id === "comfyui" ? "Not running" : "No API key"}
+                  {statusLabel}
                 </span>
               </div>
             );
@@ -149,19 +157,6 @@ function GettingStartedSection(props: {
         >
           Manage API Keys
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            import("../../lib/onboarding").then(({ loadBundledWorkflows }) => {
-              void loadBundledWorkflows().then(() => {
-                import("sonner").then(({ toast }) => toast.success("Default workflows loaded"));
-              });
-            });
-          }}
-          className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
-        >
-          Load Default Workflows
-        </button>
       </div>
     </div>
   );
@@ -169,137 +164,49 @@ function GettingStartedSection(props: {
 
 function AboutSection() {
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
-  const [updateStatus, setUpdateStatus] = useState<PortableUpdateStatus | null>(null);
-  const [checking, setChecking] = useState(false);
-  const [installing, setInstalling] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     getAppInfo()
-      .then((info) => {
-        if (!cancelled) setAppInfo(info);
-      })
-      .catch(() => {
-        if (!cancelled) setAppInfo(null);
-      });
-    return () => {
-      cancelled = true;
-    };
+      .then((info) => { if (!cancelled) setAppInfo(info); })
+      .catch(() => { if (!cancelled) setAppInfo(null); });
+    return () => { cancelled = true; };
   }, []);
-
-  const checkForUpdates = async () => {
-    setChecking(true);
-    setError(null);
-    try {
-      setUpdateStatus(await checkPortableUpdate());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to check for updates");
-    } finally {
-      setChecking(false);
-    }
-  };
-
-  const installUpdate = async () => {
-    if (!updateStatus?.downloadUrl) return;
-    const confirmed = window.confirm(
-      "imgimg will download the portable update, close, replace the current EXE, and reopen. Continue?"
-    );
-    if (!confirmed) return;
-
-    setInstalling(true);
-    setError(null);
-    try {
-      await installPortableUpdate(updateStatus.downloadUrl);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to install update");
-      setInstalling(false);
-    }
-  };
-
-  const currentVersion = appInfo?.version ?? updateStatus?.currentVersion ?? "Loading…";
-  const updateMessage = updateStatus
-    ? updateStatus.updateAvailable
-      ? `Version ${updateStatus.latestVersion} is available.`
-      : "You are up to date."
-    : "Check GitHub Releases for a newer portable build.";
 
   return (
     <div className="space-y-8">
       <div>
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">About</h2>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Version, release, and portable update information</p>
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Version and release information</p>
       </div>
 
       <div className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
         <div className="flex items-center justify-between px-4 py-3">
-          <div>
-            <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">App</div>
-            <div className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Desktop application name</div>
-          </div>
-          <div className="text-sm text-zinc-700 dark:text-zinc-300">{appInfo?.name ?? "imgimg"}</div>
+          <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">App</span>
+          <span className="text-sm text-zinc-700 dark:text-zinc-300">{appInfo?.name ?? "imgimg"}</span>
         </div>
         <div className="flex items-center justify-between px-4 py-3">
-          <div>
-            <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Version</div>
-            <div className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Current running app version</div>
-          </div>
-          <div className="font-mono text-sm text-zinc-700 dark:text-zinc-300">{currentVersion}</div>
+          <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Version</span>
+          <span className="font-mono text-sm text-zinc-700 dark:text-zinc-300">{appInfo?.version ?? "Loading…"}</span>
         </div>
         <div className="flex items-center justify-between px-4 py-3">
-          <div>
-            <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Distribution</div>
-            <div className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Portable self-update replaces this EXE and restarts the app</div>
-          </div>
-          <div className="text-sm text-zinc-700 dark:text-zinc-300">Portable Windows</div>
+          <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Platform</span>
+          <span className="text-sm capitalize text-zinc-700 dark:text-zinc-300">{appInfo?.platform ?? "desktop"}</span>
         </div>
       </div>
 
-      <div className="space-y-4 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
-        <div>
-          <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Updates</h3>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{updateMessage}</p>
-          {updateStatus?.assetName ? (
-            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Portable asset: {updateStatus.assetName}</p>
-          ) : null}
-          {error ? <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p> : null}
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={checkForUpdates}
-            disabled={checking || installing}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-          >
-            {checking ? "Checking…" : "Check for updates"}
-          </button>
-
-          {updateStatus?.updateAvailable && updateStatus.downloadUrl ? (
-            <button
-              type="button"
-              onClick={installUpdate}
-              disabled={installing}
-              className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
-            >
-              {installing ? "Installing…" : "Install and restart"}
-            </button>
-          ) : null}
-
-          <a
-            href="https://github.com/oshtz/imgimg/releases"
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
-          >
-            GitHub Releases
-          </a>
-        </div>
+      <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+        <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Updates</h3>
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          Updates are distributed as signed release artifacts. Download and install them from GitHub Releases.
+        </p>
+        <a href="https://github.com/oshtz/imgimg/releases" target="_blank" rel="noreferrer" className="mt-4 inline-flex rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900">
+          Open GitHub Releases
+        </a>
       </div>
     </div>
   );
 }
-
 function PreferencesSection(props: {
   theme: ThemePreference;
   onThemeChange: (next: ThemePreference) => void;

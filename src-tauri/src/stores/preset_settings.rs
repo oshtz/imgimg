@@ -50,8 +50,7 @@ pub async fn set_presets_for_game(
     if presets.is_empty() {
         s.presets_by_game_id.remove(game_id);
     } else {
-        s.presets_by_game_id
-            .insert(game_id.to_string(), presets);
+        s.presets_by_game_id.insert(game_id.to_string(), presets);
     }
     save(pool, &s).await
 }
@@ -67,10 +66,7 @@ pub async fn get_preset_by_id(
 
 pub async fn upsert_preset(pool: &SqlitePool, game_id: &str, preset: Preset) -> AppResult<()> {
     let mut s = load(pool).await?;
-    let presets = s
-        .presets_by_game_id
-        .entry(game_id.to_string())
-        .or_default();
+    let presets = s.presets_by_game_id.entry(game_id.to_string()).or_default();
     if let Some(pos) = presets.iter().position(|p| p.id == preset.id) {
         presets[pos] = preset;
     } else {
@@ -81,10 +77,7 @@ pub async fn upsert_preset(pool: &SqlitePool, game_id: &str, preset: Preset) -> 
 
 pub async fn delete_preset(pool: &SqlitePool, game_id: &str, preset_id: &str) -> AppResult<bool> {
     let mut s = load(pool).await?;
-    let presets = s
-        .presets_by_game_id
-        .entry(game_id.to_string())
-        .or_default();
+    let presets = s.presets_by_game_id.entry(game_id.to_string()).or_default();
     let len_before = presets.len();
     presets.retain(|p| p.id != preset_id);
     let removed = presets.len() < len_before;
@@ -96,11 +89,10 @@ pub async fn delete_preset(pool: &SqlitePool, game_id: &str, preset_id: &str) ->
 }
 
 async fn load(pool: &SqlitePool) -> AppResult<PresetSettings> {
-    let row: Option<(String,)> =
-        sqlx::query_as("SELECT value FROM app_settings WHERE key = ?")
-            .bind(SETTINGS_KEY)
-            .fetch_optional(pool)
-            .await?;
+    let row: Option<(String,)> = sqlx::query_as("SELECT value FROM app_settings WHERE key = ?")
+        .bind(SETTINGS_KEY)
+        .fetch_optional(pool)
+        .await?;
     match row {
         Some((json,)) => Ok(serde_json::from_str(&json).unwrap_or_else(|e| {
             log::warn!(

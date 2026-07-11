@@ -9,7 +9,7 @@ use crate::config::AppConfig;
 use crate::db::models::Asset;
 use crate::error::{AppError, AppResult};
 use crate::providers::common::{
-    bearer_headers, download_bytes, extension_from_content_type, timestamp_suffix,
+    bearer_headers, download_asset, download_bytes, extension_from_content_type, timestamp_suffix,
 };
 use crate::services::storage::LocalStorage;
 
@@ -37,15 +37,10 @@ impl ReplicateProxy {
         }
     }
 
-    /// Get API token from admin settings, then config, then env.
+    /// Get API token from the OS credential store.
     pub async fn get_api_token(&self) -> AppResult<String> {
         if let Some(key) = crate::stores::admin_settings::get_replicate_api_key(&self.db).await? {
             return Ok(key);
-        }
-        if let Some(ref token) = self.config.replicate_api_token {
-            if !token.is_empty() {
-                return Ok(token.clone());
-            }
         }
         Err(AppError::Config(
             "Replicate API token not configured".into(),
@@ -260,8 +255,6 @@ impl ReplicateProxy {
             ));
         }
 
-        // Download the result
-        let (bytes, _) = download_bytes(&self.http_client, &output_url, None, 60_000).await?;
         let ext = extension_from_content_type(&content_type);
         let filename = format!(
             "{}_{}.{}",
@@ -270,9 +263,18 @@ impl ReplicateProxy {
             ext
         );
 
-        self.storage
-            .write_binary_asset(generation_id, asset_type, item_index, &filename, &bytes)
-            .await
+        download_asset(
+            &self.http_client,
+            &self.storage,
+            &output_url,
+            None,
+            60_000,
+            generation_id,
+            asset_type,
+            item_index,
+            &filename,
+        )
+        .await
     }
 }
 

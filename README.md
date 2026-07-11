@@ -17,7 +17,7 @@ Tauri 2 desktop app for AI image, video, and audio generation. Local ComfyUI wor
 - **FAL** - cloud image / video / audio
 - **Kie** - cloud generation
 
-API keys are configured in-app under Settings -> Providers.
+API keys are configured in-app under Settings → API Keys and stored in the native OS credential vault (Windows Credential Manager or macOS Keychain).
 
 ## Prerequisites
 
@@ -42,13 +42,17 @@ npm run tauri:build
 
 ```bash
 npm run test        # web (vitest)
+npm run test:coverage # web coverage with enforced thresholds
 npm run test:rust   # src-tauri (cargo test)
 npm run test:all    # both
+npm run check:versions # package/Cargo/Tauri version alignment
 ```
 
 ## Security and Local Data
 
-imgimg stores settings, generated asset metadata, workflows, and provider API keys in the app's per-user SQLite database. API keys are masked in the UI, but they are not stored in an OS keychain or encrypted at rest yet, so treat the app data directory as sensitive and do not commit copied databases or logs.
+imgimg stores settings, generation metadata, workflows, canvas state, Iterate threads, and Audio Desk metadata in the app's per-user SQLite database. Provider API keys are stored separately in the native OS credential vault; Tauri commands return only presence flags and masked hints.
+
+Generated assets use immutable UUID filenames and atomic `.part` writes. SQLite migrations are versioned and create a consistent database backup before upgrading an existing schema. Treat the app data directory, exported archives, backups, and logs as private user data.
 
 Generated media stays local unless you send a generation request to a configured cloud provider. Cloud provider requests are governed by that provider's own terms and data handling.
 
@@ -71,6 +75,13 @@ Generic workflow templates bundled with the app (copied into the Tauri bundle as
 
 User-authored and ComfyUI workflows are managed at runtime from the app's data directory. See [`workflows/README.md`](workflows/README.md) for template format, injection tokens, and metadata.
 
-## Packaging
+## Packaging and releases
 
-The npm packages are marked `private` to prevent accidental npm publication. The repository source is MIT licensed; desktop builds are produced through Tauri.
+The npm packages are marked `private` to prevent accidental npm publication. Desktop releases are produced only from `v*` tags or an explicit manual workflow run. Release CI verifies tests, coverage, dependency audits, version alignment, Windows Authenticode signatures, macOS signing/notarization, SHA-256 checksums, and SBOM generation before publishing artifacts to an existing tag. The workflow never creates or force-moves Git tags.
+
+The app does not self-replace or execute downloaded updates. Users install newer signed builds from [GitHub Releases](https://github.com/oshtz/imgimg/releases).
+
+Release secrets:
+
+- Windows: `WINDOWS_CERTIFICATE_BASE64`, `WINDOWS_CERTIFICATE_PASSWORD`
+- macOS: `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`

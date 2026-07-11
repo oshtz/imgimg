@@ -13,8 +13,7 @@ use crate::providers::openrouter_proxy::OpenRouterProxy;
 use crate::state::AppState;
 use crate::stores::{canvas_meta, canvas_state, chat_thread, lora_settings, workflow_store};
 
-type CanvasChatCancellationMap =
-    Arc<tokio::sync::Mutex<HashMap<String, Arc<AtomicBool>>>>;
+type CanvasChatCancellationMap = Arc<tokio::sync::Mutex<HashMap<String, Arc<AtomicBool>>>>;
 
 #[derive(Debug, Default, PartialEq, Eq)]
 struct WorkflowAgentOverrides {

@@ -24,11 +24,10 @@ pub struct LoraSettings {
 }
 
 pub async fn get_settings(pool: &SqlitePool) -> AppResult<LoraSettings> {
-    let row: Option<(String,)> =
-        sqlx::query_as("SELECT value FROM app_settings WHERE key = ?")
-            .bind(SETTINGS_KEY)
-            .fetch_optional(pool)
-            .await?;
+    let row: Option<(String,)> = sqlx::query_as("SELECT value FROM app_settings WHERE key = ?")
+        .bind(SETTINGS_KEY)
+        .fetch_optional(pool)
+        .await?;
     match row {
         Some((json,)) => Ok(serde_json::from_str(&json).unwrap_or_else(|e| {
             log::warn!(
@@ -105,8 +104,7 @@ pub async fn set_display_names_for_game(
     let mut s = get_settings(pool).await?;
     match names {
         Some(m) if !m.is_empty() => {
-            s.display_names_by_game_id
-                .insert(game_id.to_string(), m);
+            s.display_names_by_game_id.insert(game_id.to_string(), m);
         }
         _ => {
             s.display_names_by_game_id.remove(game_id);
@@ -162,8 +160,7 @@ pub async fn set_prompt_prefixes_for_game(
     let mut s = get_settings(pool).await?;
     match prefixes {
         Some(m) if !m.is_empty() => {
-            s.prompt_prefixes_by_game_id
-                .insert(game_id.to_string(), m);
+            s.prompt_prefixes_by_game_id.insert(game_id.to_string(), m);
         }
         _ => {
             s.prompt_prefixes_by_game_id.remove(game_id);
@@ -260,5 +257,8 @@ pub async fn get_keyword_replacements_for_model(
     model_id: &str,
 ) -> AppResult<Option<HashMap<String, String>>> {
     let replacements = get_keyword_replacements_for_game(pool, game_id).await?;
-    Ok(replacements.get(model_id).cloned().filter(|m| !m.is_empty()))
+    Ok(replacements
+        .get(model_id)
+        .cloned()
+        .filter(|m| !m.is_empty()))
 }

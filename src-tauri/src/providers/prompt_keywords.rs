@@ -3,10 +3,7 @@
 use std::collections::HashMap;
 
 /// Apply keyword replacements to a prompt using whole-word matching.
-pub fn apply_keyword_replacements(
-    prompt: &str,
-    replacements: &HashMap<String, String>,
-) -> String {
+pub fn apply_keyword_replacements(prompt: &str, replacements: &HashMap<String, String>) -> String {
     let mut result = prompt.to_string();
 
     for (keyword, description) in replacements {
@@ -35,7 +32,10 @@ mod tests {
         );
 
         let result = apply_keyword_replacements("Bonnie is sitting in a cafe", &replacements);
-        assert_eq!(result, "blonde haired woman with green eyes is sitting in a cafe");
+        assert_eq!(
+            result,
+            "blonde haired woman with green eyes is sitting in a cafe"
+        );
     }
 
     #[test]

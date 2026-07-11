@@ -6,7 +6,7 @@
   "build": {
     "frontendDist": "../web/dist",
     "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "node scripts/dev.mjs",
+    "beforeDevCommand": "npm --prefix web run dev",
     "beforeBuildCommand": "npm --prefix web run build"
   },
   "app": {
@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": null,
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' asset: http://asset.localhost blob: data: https:; media-src 'self' asset: http://asset.localhost blob: data: https:; connect-src 'self' ipc: http://ipc.localhost https: http://localhost:* ws://localhost:* ws://127.0.0.1:*; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
       "assetProtocol": {
         "enable": true,
         "scope": [
@@ -35,6 +35,11 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "windows": {
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "signCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/sign-windows.ps1 %1"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

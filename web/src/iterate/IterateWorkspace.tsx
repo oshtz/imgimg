@@ -22,6 +22,7 @@ import { createGeneration, type ApiBaseUrl, type DiscoveredModel, type WorkflowS
 import { ProviderModelPicker } from "../components/ReplicateModelPicker";
 import type { Asset, Generation } from "../types";
 import { usePersistedState, usePersistedString } from "../hooks/usePersistedState";
+import { useDurableWorkspaceState } from "../hooks/useDurableWorkspaceState";
 import { cn } from "../utils/cn";
 import { extractError } from "../utils/extractError";
 import type { RegisterGenerationInput } from "../audioDesk/AudioDesk";
@@ -342,7 +343,7 @@ function TurnView(props: {
 }
 
 export function IterateWorkspace(props: IterateWorkspaceProps) {
-  const [threads, setThreads] = usePersistedState<IterateThread[]>("imgimg.iterate.threads.v1", []);
+  const [threads, setThreads] = useDurableWorkspaceState<IterateThread[]>("iterate_threads", "imgimg.iterate.threads.v1", []);
   const [activeThreadId, setActiveThreadId] = usePersistedString("imgimg.iterate.activeThread.v1", "");
   const [selectedWorkflowId, setSelectedWorkflowId] = usePersistedString("imgimg.iterate.workflow.v1", "");
   const [aspectRatio, setAspectRatio] = usePersistedString("imgimg.iterate.aspectRatio.v1", "1:1");

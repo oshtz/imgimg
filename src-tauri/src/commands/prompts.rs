@@ -21,13 +21,23 @@ pub async fn enhance_prompt(
     );
 
     // Fall back to admin-configured model/prompt if not provided
-    let admin_model = admin_settings::get_prompt_enhancer_model(&state.db).await.ok().flatten();
+    let admin_model = admin_settings::get_prompt_enhancer_model(&state.db)
+        .await
+        .ok()
+        .flatten();
     let effective_model = model.or(admin_model);
 
     // Priority: active enhancer preset > admin setting > hardcoded default
-    let effective_prompt = match enhancer_presets::get_active_preset(&state.db).await.ok().flatten() {
+    let effective_prompt = match enhancer_presets::get_active_preset(&state.db)
+        .await
+        .ok()
+        .flatten()
+    {
         Some(preset) => Some(preset.system_prompt),
-        None => admin_settings::get_prompt_enhancer_system_prompt(&state.db).await.ok().flatten(),
+        None => admin_settings::get_prompt_enhancer_system_prompt(&state.db)
+            .await
+            .ok()
+            .flatten(),
     };
 
     if let Some(rid) = request_id {
@@ -43,7 +53,13 @@ pub async fn enhance_prompt(
         .await
     } else {
         // Non-streaming mode
-        prompt_enhancer::enhance(&proxy, &prompt, effective_model.as_deref(), effective_prompt.as_deref()).await
+        prompt_enhancer::enhance(
+            &proxy,
+            &prompt,
+            effective_model.as_deref(),
+            effective_prompt.as_deref(),
+        )
+        .await
     }
 }
 
