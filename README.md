@@ -77,11 +77,14 @@ User-authored and ComfyUI workflows are managed at runtime from the app's data d
 
 ## Packaging and releases
 
-The npm packages are marked `private` to prevent accidental npm publication. Desktop releases are produced only from `v*` tags or an explicit manual workflow run. Release CI verifies tests, coverage, dependency audits, version alignment, Windows Authenticode signatures, macOS signing/notarization, SHA-256 checksums, and SBOM generation before publishing artifacts to an existing tag. The workflow never creates or force-moves Git tags.
+The npm packages are marked `private` to prevent accidental npm publication. Desktop artifacts are built only from `v*` tags or an explicit manual workflow run. Windows releases are unsigned x64 portable executables and may trigger SmartScreen or antivirus warnings; verify them against the published SHA-256 manifest. macOS releases are signed and notarized Apple Silicon DMGs. Release CI also verifies tests, coverage, dependency audits, version alignment, checksums, and SBOM generation. The workflow never creates or moves Git tags.
 
-The app does not self-replace or execute downloaded updates. Users install newer signed builds from [GitHub Releases](https://github.com/oshtz/imgimg/releases).
+The app does not self-replace or execute downloaded updates. Download newer builds manually from [GitHub Releases](https://github.com/oshtz/imgimg/releases).
 
-Release secrets:
+macOS release secrets:
 
-- Windows: `WINDOWS_CERTIFICATE_BASE64`, `WINDOWS_CERTIFICATE_PASSWORD`
-- macOS: `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`
+- `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`
+
+## License
+
+imgimg is released under the [MIT License](LICENSE).
