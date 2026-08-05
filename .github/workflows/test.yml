@@ -56,4 +56,5 @@ jobs:
       - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          ignore: RUSTSEC-2026-0235 # rkyv is not enabled; no patched 0.7 release exists.
           working-directory: src-tauri
