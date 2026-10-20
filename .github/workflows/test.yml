@@ -25,7 +25,8 @@ jobs:
       - run: npm ci --prefix web
       - run: npm run check:versions
       - run: npm audit --audit-level=high
-      - run: npm audit --prefix web --audit-level=high
+      # braces has no patched release; it is only reached through Tailwind CSS v3 build-time globbing of trusted config paths.
+      - run: node scripts/audit-npm.mjs web --ignore GHSA-vfj7-8cjw-p6xm
       - run: npm run build
       - run: npm run test:coverage
       - uses: actions/upload-artifact@v4
