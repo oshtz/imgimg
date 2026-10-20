@@ -386,8 +386,8 @@ pub async fn export_generation_assets_zip(
         let part_path = std::path::PathBuf::from(format!("{}.part", destination.display()));
         let file = std::fs::File::create(&part_path)?;
         let mut zip = zip::ZipWriter::new(file);
-        let options =
-            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
         for (source_path, filename) in source_paths {
             let mut source = std::fs::File::open(source_path)?;
             zip.start_file(filename, options)
