@@ -1,0 +1,362 @@
+[
+  {
+    "name": "audio--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "audio--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "canvas--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "canvas--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "canvas-new--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "canvas-new--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "compare--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "compare--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "focus-aspect-pill--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "focus-aspect-pill--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "focus-prompt-textarea--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "focus-prompt-textarea--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "focus-settings-input--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "focus-settings-input--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "gallery--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "gallery--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "generate--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "generate--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "generate-aspect-open--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "generate-aspect-open--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "generate-delete-confirm--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "generate-delete-confirm--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "generate-detail--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "generate-detail--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "generate-model-picker--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "generate-model-picker--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "home--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "home--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "hover-gallery-card--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "hover-gallery-card--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "hover-sidebar-item--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "hover-sidebar-item--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "iterate--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "iterate--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "mobile-generate--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "mobile-generate--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "mobile-home--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "mobile-home--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "mobile-sidebar--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "mobile-sidebar--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "prompts--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "prompts--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-about--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-about--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-api-keys--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-api-keys--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-asset-types--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-asset-types--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-canvas-agent--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-canvas-agent--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-feature-workflows--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-feature-workflows--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-getting-started--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-getting-started--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-history--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-history--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-loras--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-loras--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-preferences--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-preferences--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-presets--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-presets--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-prompt-enhancer--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-prompt-enhancer--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-workflows--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "settings-workflows--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "sidebar-collapsed--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "sidebar-collapsed--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "welcome--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "welcome--light",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "welcome-providers--dark",
+    "pixels": 0,
+    "pct": 0
+  },
+  {
+    "name": "welcome-providers--light",
+    "pixels": 0,
+    "pct": 0
+  }
+]
