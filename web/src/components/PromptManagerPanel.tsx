@@ -180,7 +180,7 @@ export function PromptManagerPanel({ savedPrompts, onSavedPromptsChange }: Promp
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filter prompts…"
-            className="w-full rounded-lg border border-zinc-200 bg-transparent py-1.5 pl-8 pr-8 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500"
+            className="w-full rounded-lg border border-zinc-200 bg-transparent py-1.5 pl-8 pr-8 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-hidden dark:border-zinc-700 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500"
           />
           {search && (
             <button
@@ -215,13 +215,13 @@ export function PromptManagerPanel({ savedPrompts, onSavedPromptsChange }: Promp
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     placeholder="Prompt name"
-                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-hidden dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500"
                   />
                   <div className="relative w-full rounded-lg border border-zinc-300 bg-white dark:border-zinc-600 dark:bg-zinc-800">
                     <div
                       ref={backdropRef}
                       aria-hidden
-                      className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3 py-1.5 font-mono text-sm"
+                      className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap wrap-break-word px-3 py-1.5 font-mono text-sm"
                     >
                       {renderHighlightedText(editText)}
                     </div>
@@ -240,7 +240,7 @@ export function PromptManagerPanel({ savedPrompts, onSavedPromptsChange }: Promp
                       placeholder="Prompt text"
                       rows={1}
                       spellCheck={false}
-                      className="relative w-full resize-none bg-transparent px-3 py-1.5 font-mono text-sm text-transparent caret-zinc-900 placeholder:text-zinc-400 focus:outline-none dark:caret-zinc-100 dark:placeholder:text-zinc-500"
+                      className="relative w-full resize-none bg-transparent px-3 py-1.5 font-mono text-sm text-transparent caret-zinc-900 placeholder:text-zinc-400 focus:outline-hidden dark:caret-zinc-100 dark:placeholder:text-zinc-500"
                     />
                   </div>
                   {(() => {

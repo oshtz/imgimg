@@ -111,7 +111,7 @@ export function AssetImporter({ assetUrl, apiBaseUrl, containerWidth, containerH
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 whitespace-nowrap rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-medium text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+        className="flex items-center gap-1 whitespace-nowrap rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-medium text-zinc-700 shadow-xs hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
         title="Import from generations"
       >
         <TbPhoto size={16} />

@@ -1420,7 +1420,7 @@ export default function App() {
     <main className="flex h-screen flex-col overflow-hidden bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-100">
       <TitleBar apiBaseUrl={apiBaseUrl} enabledProviders={enabledProviders} />
       {/* Skip navigation link for accessibility */}
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-zinc-600 focus:px-4 focus:py-2 focus:text-white focus:shadow-lg">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-100 focus:rounded-lg focus:bg-zinc-600 focus:px-4 focus:py-2 focus:text-white focus:shadow-lg">
         Skip to main content
       </a>
       <div className="flex min-h-0 flex-1">

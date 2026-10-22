@@ -42,7 +42,7 @@ export function ConnectorActionBar({ connector, fromNode, toNode, viewport, disp
 
   return (
     <div
-      className="absolute z-30 flex items-center gap-1 rounded-lg border border-zinc-200 bg-white/90 px-2 py-1 shadow-lg backdrop-blur dark:border-zinc-700 dark:bg-zinc-800/90"
+      className="absolute z-30 flex items-center gap-1 rounded-lg border border-zinc-200 bg-white/90 px-2 py-1 shadow-lg backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-800/90"
       style={{ left: screenX, top: screenY, transform: "translateX(-50%)" }}
     >
       {CONN_COLORS.map((c) => (

@@ -210,7 +210,7 @@ export function PromptEnhancerSection({ apiBaseUrl }: PromptEnhancerSectionProps
               "border-zinc-300 bg-white text-zinc-900",
               "dark:border-zinc-700 dark:bg-black dark:text-zinc-100",
               "placeholder:text-zinc-400 dark:placeholder:text-zinc-500",
-              "focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/50",
+              "focus:border-zinc-500 focus:outline-hidden focus:ring-2 focus:ring-zinc-500/50",
             ].join(" ")}
           />
           {!model && effectiveModel && (
@@ -297,7 +297,7 @@ export function PromptEnhancerSection({ apiBaseUrl }: PromptEnhancerSectionProps
                   "border-zinc-300 bg-white text-zinc-900",
                   "dark:border-zinc-700 dark:bg-black dark:text-zinc-100",
                   "placeholder:text-zinc-400 dark:placeholder:text-zinc-500",
-                  "focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/50",
+                  "focus:border-zinc-500 focus:outline-hidden focus:ring-2 focus:ring-zinc-500/50",
                 ].join(" ")}
                 autoFocus
               />
@@ -311,7 +311,7 @@ export function PromptEnhancerSection({ apiBaseUrl }: PromptEnhancerSectionProps
                   "border-zinc-300 bg-white text-zinc-900",
                   "dark:border-zinc-700 dark:bg-black dark:text-zinc-100",
                   "placeholder:text-zinc-400 dark:placeholder:text-zinc-500",
-                  "focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/50",
+                  "focus:border-zinc-500 focus:outline-hidden focus:ring-2 focus:ring-zinc-500/50",
                 ].join(" ")}
               />
               <div className="flex items-center gap-2">
@@ -386,7 +386,7 @@ export function PromptEnhancerSection({ apiBaseUrl }: PromptEnhancerSectionProps
                           "rounded border px-2 py-0.5 text-sm font-medium",
                           "border-zinc-300 bg-white text-zinc-900",
                           "dark:border-zinc-700 dark:bg-black dark:text-zinc-100",
-                          "focus:border-zinc-500 focus:outline-none",
+                          "focus:border-zinc-500 focus:outline-hidden",
                         ].join(" ")}
                       />
                     ) : (
@@ -453,7 +453,7 @@ export function PromptEnhancerSection({ apiBaseUrl }: PromptEnhancerSectionProps
                       "w-full resize-y rounded-lg border px-3 py-2 text-sm font-mono",
                       "border-zinc-300 bg-white text-zinc-900",
                       "dark:border-zinc-700 dark:bg-black dark:text-zinc-100",
-                      "focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/50",
+                      "focus:border-zinc-500 focus:outline-hidden focus:ring-2 focus:ring-zinc-500/50",
                     ].join(" ")}
                   />
                 ) : (

@@ -86,7 +86,7 @@ export function WorkflowParameterControls(props: {
                 )}
               </button>
               {isOpen && (
-                <div className={`absolute left-0 z-50 min-w-[10rem] rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-800 dark:bg-black ${props.dropUp ? "bottom-[calc(100%_+_4px)]" : "top-[calc(100%_+_4px)]"}`}>
+                <div className={`absolute left-0 z-50 min-w-40 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-800 dark:bg-black ${props.dropUp ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"}`}>
                   {param.options.map((opt) => (
                     <button
                       key={opt.value}
@@ -129,7 +129,7 @@ export function WorkflowParameterControls(props: {
                   props.onChange(param.name, val);
                 }}
                 disabled={props.disabled}
-                className="w-12 bg-transparent text-center text-xs text-zinc-900 focus:outline-none dark:text-zinc-100"
+                className="w-12 bg-transparent text-center text-xs text-zinc-900 focus:outline-hidden dark:text-zinc-100"
               />
               {param.unit && (
                 <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{param.unit}</span>
@@ -149,7 +149,7 @@ export function WorkflowParameterControls(props: {
               value={String(currentValue)}
               onChange={(e) => props.onChange(param.name, e.target.value)}
               disabled={props.disabled}
-              className="w-20 bg-transparent text-xs text-zinc-900 focus:outline-none dark:text-zinc-100"
+              className="w-20 bg-transparent text-xs text-zinc-900 focus:outline-hidden dark:text-zinc-100"
             />
           </div>
         );

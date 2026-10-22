@@ -25,7 +25,7 @@ export function InlineTextEditor({ editingNodeId, node, viewport, dispatch, onCl
       <div className="absolute inset-0 z-40" onClick={onClose} />
       <textarea
         autoFocus
-        className="absolute z-50 resize-none rounded border-2 border-zinc-400 bg-transparent p-2 text-sm outline-none"
+        className="absolute z-50 resize-none rounded border-2 border-zinc-400 bg-transparent p-2 text-sm outline-hidden"
         style={{
           left: screenX,
           top: screenY,

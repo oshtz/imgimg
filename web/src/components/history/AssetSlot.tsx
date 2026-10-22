@@ -62,7 +62,7 @@ export function AssetSlot(props: {
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80">
-                  <div className="ml-0.5 h-0 w-0 border-y-[6px] border-l-[10px] border-y-transparent border-l-zinc-900" />
+                  <div className="ml-0.5 h-0 w-0 border-y-[6px] border-l-10 border-y-transparent border-l-zinc-900" />
                 </div>
               </div>
             </>
@@ -120,7 +120,7 @@ export function AssetSlot(props: {
       {canFillSlot && props.onFillSlot ? (
         <button
           type="button"
-          className="absolute inset-0 flex cursor-pointer flex-col items-center justify-center gap-2 bg-black/50 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"
+          className="absolute inset-0 flex cursor-pointer flex-col items-center justify-center gap-2 bg-black/50 text-white opacity-0 backdrop-blur-xs transition-opacity group-hover:opacity-100"
           onClick={() => props.onFillSlot!(g.id, idx)}
           aria-label="Generate image for this slot"
         >
@@ -131,7 +131,7 @@ export function AssetSlot(props: {
         </button>
       ) : null}
       {asset && asset.type === "preview" ? (
-        <div className="absolute left-2 top-2 inline-flex items-center gap-2 rounded bg-black/70 px-1.5 py-0.5 text-[11px] text-white backdrop-blur">
+        <div className="absolute left-2 top-2 inline-flex items-center gap-2 rounded bg-black/70 px-1.5 py-0.5 text-[11px] text-white backdrop-blur-sm">
           {isLivePreview ? (
             <span className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-zinc-400" aria-hidden="true" />
           ) : null}
@@ -139,7 +139,7 @@ export function AssetSlot(props: {
         </div>
       ) : null}
       {(asset || label) ? (
-        <div className="absolute bottom-2 left-2 rounded bg-black/70 px-1.5 py-0.5 text-[11px] text-white opacity-0 backdrop-blur group-hover:opacity-100">
+        <div className="absolute bottom-2 left-2 rounded bg-black/70 px-1.5 py-0.5 text-[11px] text-white opacity-0 backdrop-blur-sm group-hover:opacity-100">
           {label ?? asset?.type}
           {asset && displayIndex !== null && !label ? ` #${displayIndex}` : ""}
         </div>

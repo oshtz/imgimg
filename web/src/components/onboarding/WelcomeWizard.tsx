@@ -157,7 +157,7 @@ export function WelcomeWizard(props: {
   }, [step]);
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/60 backdrop-blur-xs">
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="onboarding-title" className="relative mx-4 w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-8 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
         {step === "welcome" && (
           <WelcomeStep
@@ -345,7 +345,7 @@ function ProviderCard(props: {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && state.key) props.onValidate();
               }}
-              className="flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-800 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-400/40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+              className="flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-800 outline-hidden focus:border-zinc-400 focus:ring-2 focus:ring-zinc-400/40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
             />
             <button
               type="button"

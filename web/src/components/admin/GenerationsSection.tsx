@@ -207,7 +207,7 @@ export function GenerationsSection({ apiBaseUrl }: GenerationsSectionProps) {
               "rounded-lg border px-3 py-2",
               "border-zinc-300 bg-white text-sm text-zinc-900",
               "dark:border-zinc-700 dark:bg-black dark:text-zinc-100",
-              "focus:border-zinc-500/50 focus:outline-none focus:ring-1 focus:ring-zinc-500/50"
+              "focus:border-zinc-500/50 focus:outline-hidden focus:ring-1 focus:ring-zinc-500/50"
             ].join(" ")}
           >
             <option value="all">All</option>
@@ -228,7 +228,7 @@ export function GenerationsSection({ apiBaseUrl }: GenerationsSectionProps) {
               "rounded-lg border px-3 py-2",
               "border-zinc-300 bg-white text-sm text-zinc-900",
               "dark:border-zinc-700 dark:bg-black dark:text-zinc-100",
-              "focus:border-zinc-500/50 focus:outline-none focus:ring-1 focus:ring-zinc-500/50"
+              "focus:border-zinc-500/50 focus:outline-hidden focus:ring-1 focus:ring-zinc-500/50"
             ].join(" ")}
           >
             <option value="all">All</option>
@@ -251,7 +251,7 @@ export function GenerationsSection({ apiBaseUrl }: GenerationsSectionProps) {
             "dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
             "hover:border-zinc-400 hover:bg-zinc-50",
             "dark:hover:border-zinc-600 dark:hover:bg-zinc-800",
-            "focus:outline-none focus:ring-2 focus:ring-zinc-500/50",
+            "focus:outline-hidden focus:ring-2 focus:ring-zinc-500/50",
             "disabled:cursor-not-allowed disabled:opacity-50"
           ].join(" ")}
         >
@@ -320,7 +320,7 @@ export function GenerationsSection({ apiBaseUrl }: GenerationsSectionProps) {
               >
                 <div className="flex gap-4">
                   {/* Thumbnail */}
-                  <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
                     {previewAsset ? (
                       <img
                         src={buildAssetUrl(apiBaseUrl, previewAsset)}
@@ -389,7 +389,7 @@ export function GenerationsSection({ apiBaseUrl }: GenerationsSectionProps) {
                           "dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400",
                           "hover:border-red-300 hover:bg-red-100",
                           "dark:hover:border-red-500/50 dark:hover:bg-red-500/20",
-                          "focus:outline-none focus:ring-2 focus:ring-red-500/50",
+                          "focus:outline-hidden focus:ring-2 focus:ring-red-500/50",
                           "disabled:cursor-not-allowed disabled:opacity-50"
                         ].join(" ")}
                       >

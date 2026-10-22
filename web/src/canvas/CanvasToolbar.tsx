@@ -92,7 +92,7 @@ export function CanvasToolbar({ history, assetUrl, apiBaseUrl, containerWidth, c
   }, [shapePickerOpen, drawPickerOpen, enginePickerOpen]);
 
   return (
-    <div className="flex items-center gap-0.5 rounded-lg border border-zinc-200 bg-white/80 px-1 py-0.5 shadow-sm backdrop-blur dark:border-zinc-700 dark:bg-zinc-800/80">
+    <div className="flex items-center gap-0.5 rounded-lg border border-zinc-200 bg-white/80 px-1 py-0.5 shadow-xs backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-800/80">
       {/* Engine selector */}
       {engines && engines.length > 1 && onEngineChange && (
         <>

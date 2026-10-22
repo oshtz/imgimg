@@ -145,7 +145,7 @@ export function CanvasAgentSection({ apiBaseUrl }: CanvasAgentSectionProps) {
               "border-zinc-300 bg-white text-zinc-900",
               "dark:border-zinc-700 dark:bg-black dark:text-zinc-100",
               "placeholder:text-zinc-400 dark:placeholder:text-zinc-500",
-              "focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/50",
+              "focus:border-zinc-500 focus:outline-hidden focus:ring-2 focus:ring-zinc-500/50",
             ].join(" ")}
           />
           {!model && effectiveModel && (
@@ -184,7 +184,7 @@ export function CanvasAgentSection({ apiBaseUrl }: CanvasAgentSectionProps) {
               "border-zinc-300 bg-white text-zinc-900",
               "dark:border-zinc-700 dark:bg-black dark:text-zinc-100",
               "placeholder:text-zinc-400 dark:placeholder:text-zinc-500",
-              "focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/50",
+              "focus:border-zinc-500 focus:outline-hidden focus:ring-2 focus:ring-zinc-500/50",
             ].join(" ")}
           />
           <p className="mt-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">
@@ -211,7 +211,7 @@ export function CanvasAgentSection({ apiBaseUrl }: CanvasAgentSectionProps) {
                 "w-32 rounded-lg border px-3 py-2 text-sm font-mono",
                 "border-zinc-300 bg-white text-zinc-900",
                 "dark:border-zinc-700 dark:bg-black dark:text-zinc-100",
-                "focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/50",
+                "focus:border-zinc-500 focus:outline-hidden focus:ring-2 focus:ring-zinc-500/50",
               ].join(" ")}
             />
             <span className="ml-2 text-xs text-zinc-400 dark:text-zinc-500">Default: 0.7</span>
@@ -239,7 +239,7 @@ export function CanvasAgentSection({ apiBaseUrl }: CanvasAgentSectionProps) {
             "rounded-lg px-5 py-2 text-sm font-medium",
             "bg-zinc-600 text-white",
             "hover:bg-zinc-700",
-            "focus:outline-none focus:ring-2 focus:ring-zinc-500",
+            "focus:outline-hidden focus:ring-2 focus:ring-zinc-500",
             "disabled:opacity-50 disabled:cursor-not-allowed",
           ].join(" ")}
         >

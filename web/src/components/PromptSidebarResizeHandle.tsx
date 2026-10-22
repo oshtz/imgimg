@@ -64,7 +64,7 @@ export function PromptSidebarResizeHandle({
       onMouseDown={handleMouseDown}
       onKeyDown={handleKeyDown}
       className={cn(
-        "absolute inset-y-0 z-30 hidden w-4 cursor-col-resize outline-none transition-colors lg:block",
+        "absolute inset-y-0 z-30 hidden w-4 cursor-col-resize outline-hidden transition-colors lg:block",
         position === "left" ? "-right-2" : "-left-2",
         "hover:bg-blue-500/10 focus:bg-blue-500/10 active:bg-blue-500/20"
       )}

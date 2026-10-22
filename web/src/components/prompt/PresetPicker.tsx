@@ -121,7 +121,7 @@ export function PresetPicker(props: {
           <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             Preset
           </span>
-          <span className="max-w-[10rem] truncate text-xs text-zinc-900 dark:text-zinc-100">
+          <span className="max-w-40 truncate text-xs text-zinc-900 dark:text-zinc-100">
             {selected?.name ?? (props.presets.length === 0 ? "No presets" : "Select...")}
           </span>
         </span>
@@ -137,7 +137,7 @@ export function PresetPicker(props: {
           role="listbox"
           aria-label="Select preset"
           className={[
-            `absolute left-0 z-50 w-[18rem] overflow-hidden rounded-xl border shadow-lg ${props.dropUp ? "bottom-[calc(100%_+_8px)]" : "top-[calc(100%_+_8px)]"}`,
+            `absolute left-0 z-50 w-[18rem] overflow-hidden rounded-xl border shadow-lg ${props.dropUp ? "bottom-[calc(100%+8px)]" : "top-[calc(100%+8px)]"}`,
             "border-zinc-200 bg-white",
             "dark:border-zinc-800 dark:bg-black"
           ].join(" ")}

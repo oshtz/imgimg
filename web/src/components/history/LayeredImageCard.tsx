@@ -633,7 +633,7 @@ export function LayeredImageCard(props: {
                                 type="button"
                                 onPointerDown={(event) => startResize(layer.id, handle, event)}
                                 className={[
-                                  "absolute h-2.5 w-2.5 rounded border border-zinc-400 bg-white shadow",
+                                  "absolute h-2.5 w-2.5 rounded border border-zinc-400 bg-white shadow-sm",
                                   "dark:border-zinc-400 dark:bg-zinc-900"
                                 ].join(" ")}
                                 style={{

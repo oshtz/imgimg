@@ -71,7 +71,7 @@ export function PresentationMode({ onExit, containerWidth, containerHeight }: Pr
 
   if (slideCount === 0) {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90">
+      <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/90">
         <div className="text-center text-white">
           <p className="text-lg font-medium">No frames found</p>
           <p className="mt-2 text-sm text-zinc-400">Add frames to your canvas to create presentation slides.</p>
@@ -84,9 +84,9 @@ export function PresentationMode({ onExit, containerWidth, containerHeight }: Pr
   }
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[100]">
+    <div className="pointer-events-none fixed inset-0 z-100">
       {/* Bottom control bar */}
-      <div className="pointer-events-auto absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-4 rounded-full bg-black/70 px-5 py-2.5 text-white backdrop-blur">
+      <div className="pointer-events-auto absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-4 rounded-full bg-black/70 px-5 py-2.5 text-white backdrop-blur-sm">
         <button onClick={() => slideIndex > 0 && goTo(slideIndex - 1)} disabled={slideIndex === 0} className="disabled:opacity-30">
           <TbArrowLeft size={18} />
         </button>
@@ -104,7 +104,7 @@ export function PresentationMode({ onExit, containerWidth, containerHeight }: Pr
 
       {/* Frame title */}
       {currentFrame?.title && (
-        <div className="pointer-events-none absolute left-1/2 top-6 -translate-x-1/2 rounded-full bg-black/50 px-4 py-1.5 text-sm font-medium text-white backdrop-blur">
+        <div className="pointer-events-none absolute left-1/2 top-6 -translate-x-1/2 rounded-full bg-black/50 px-4 py-1.5 text-sm font-medium text-white backdrop-blur-sm">
           {currentFrame.title}
         </div>
       )}

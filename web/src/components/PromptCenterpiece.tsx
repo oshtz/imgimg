@@ -696,7 +696,7 @@ export function PromptCenterpiece(props: {
   return (
     <section className={cn("relative z-30 w-full", isSidebarPrompt ? "lg:flex lg:h-full lg:min-h-0" : "")}>
       <div className={cn(
-        "rounded-xl border border-zinc-200 bg-white p-4 shadow-[0_12px_50px_-30px_rgba(0,0,0,0.25)] backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-950 dark:shadow-[0_12px_50px_-30px_rgba(0,0,0,0.9)]",
+        "rounded-xl border border-zinc-200 bg-white p-4 shadow-[0_12px_50px_-30px_rgba(0,0,0,0.25)] backdrop-blur-sm dark:border-zinc-800/80 dark:bg-zinc-950 dark:shadow-[0_12px_50px_-30px_rgba(0,0,0,0.9)]",
         isSidebarPrompt ? "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col" : ""
       )}>
         <div className={cn("min-w-0", isSidebarPrompt ? "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col" : "")}>
@@ -717,7 +717,7 @@ export function PromptCenterpiece(props: {
                 className={[
                   "pointer-events-none absolute inset-0 rounded-xl",
                   "border border-zinc-400/40",
-                  "bg-gradient-to-r from-zinc-500/10 via-zinc-400/10 to-zinc-500/10",
+                  "bg-linear-to-r from-zinc-500/10 via-zinc-400/10 to-zinc-500/10",
                   "animate-pulse"
                 ].join(" ")}
               />
@@ -865,7 +865,7 @@ export function PromptCenterpiece(props: {
                 {useTagOverlay ? (
                   <div
                     className={[
-                      "pointer-events-none absolute inset-0 whitespace-pre-wrap break-words text-sm leading-normal",
+                      "pointer-events-none absolute inset-0 whitespace-pre-wrap wrap-break-word text-sm leading-normal",
                       "text-zinc-900 dark:text-zinc-100"
                     ].join(" ")}
                   >
@@ -1041,8 +1041,8 @@ export function PromptCenterpiece(props: {
                     "relative z-10 min-w-0 w-full resize-none bg-transparent text-sm placeholder:text-zinc-500",
                     "dark:placeholder:text-zinc-500",
                     useTagOverlay ? "text-transparent caret-zinc-900 dark:caret-zinc-100" : "text-zinc-900 dark:text-zinc-100",
-                    isSidebarPrompt ? "lg:h-full lg:min-h-[12rem] lg:flex-1 lg:overflow-y-auto" : "",
-                    "focus:outline-none",
+                    isSidebarPrompt ? "lg:h-full lg:min-h-48 lg:flex-1 lg:overflow-y-auto" : "",
+                    "focus:outline-hidden",
                     isDisabled ? "cursor-not-allowed opacity-60" : ""
                   ].join(" ")}
                 />
@@ -1501,7 +1501,7 @@ export function PromptCenterpiece(props: {
           ) : null}
 
             {/* Action buttons */}
-            <div className="ml-auto flex flex-shrink-0 items-center gap-1">
+            <div className="ml-auto flex shrink-0 items-center gap-1">
               {props.promptRequired !== false ? (
                 <div className="relative" ref={enhancerDropdownRef}>
                   <div className={[
@@ -1590,7 +1590,7 @@ export function PromptCenterpiece(props: {
                             }}
                           >
                             <span className={[
-                              "h-1.5 w-1.5 rounded-full flex-shrink-0",
+                              "h-1.5 w-1.5 rounded-full shrink-0",
                               preset.isDefault ? "bg-zinc-600 dark:bg-zinc-300" : "bg-transparent",
                             ].join(" ")} />
                             <span className="truncate">{preset.name}</span>
@@ -1641,7 +1641,7 @@ export function PromptCenterpiece(props: {
                   "ml-1 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium",
                   "bg-zinc-900 text-white hover:bg-black",
                   "dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white",
-                  "focus:outline-none focus:ring-2 focus:ring-zinc-400/40 focus:ring-offset-2",
+                  "focus:outline-hidden focus:ring-2 focus:ring-zinc-400/40 focus:ring-offset-2",
                   "focus:ring-offset-white dark:focus:ring-offset-black",
                   "disabled:cursor-not-allowed disabled:opacity-60"
                 ].join(" ")}

@@ -59,7 +59,7 @@ export function PromptVariableForm({ variables, onSubmit, onCancel }: PromptVari
                 }
               }}
               placeholder={`[${name}]`}
-              className="w-full rounded-lg border border-zinc-200 bg-transparent px-2.5 py-1.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500"
+              className="w-full rounded-lg border border-zinc-200 bg-transparent px-2.5 py-1.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-hidden dark:border-zinc-700 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500"
             />
           </div>
         ))}

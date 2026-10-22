@@ -92,7 +92,7 @@ export function ModelPicker(props: {
           <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             LoRA
           </span>
-          <span className="max-w-[10rem] truncate text-xs text-zinc-900 dark:text-zinc-100">
+          <span className="max-w-40 truncate text-xs text-zinc-900 dark:text-zinc-100">
             {selected?.name ?? (props.models.length === 0 ? "Loading…" : "Select…")}
           </span>
         </span>
@@ -109,7 +109,7 @@ export function ModelPicker(props: {
           role="listbox"
           aria-label="LoRA model"
           className={[
-            `absolute left-0 z-50 w-[22rem] overflow-hidden rounded-xl border shadow-lg ${props.dropUp ? "bottom-[calc(100%_+_8px)]" : "top-[calc(100%_+_8px)]"}`,
+            `absolute left-0 z-50 w-88 overflow-hidden rounded-xl border shadow-lg ${props.dropUp ? "bottom-[calc(100%+8px)]" : "top-[calc(100%+8px)]"}`,
             "border-zinc-200 bg-white",
             "dark:border-zinc-800 dark:bg-black"
           ].join(" ")}
@@ -120,7 +120,7 @@ export function ModelPicker(props: {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search LoRAs…"
-              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-400/40 dark:border-zinc-800 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-500"
+              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-500 focus:outline-hidden focus:ring-2 focus:ring-zinc-400/40 dark:border-zinc-800 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-500"
             />
           </div>
 

@@ -144,7 +144,7 @@ function FilterDropdown({ value, onChange, options, allLabel, placeholder }: Fil
         className={[
           "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm whitespace-nowrap",
           "bg-white dark:bg-black",
-          "focus:border-zinc-500/50 focus:outline-none focus:ring-1 focus:ring-zinc-500/50",
+          "focus:border-zinc-500/50 focus:outline-hidden focus:ring-1 focus:ring-zinc-500/50",
           isActive
             ? "border-zinc-500 text-zinc-900 dark:border-zinc-500 dark:text-zinc-100"
             : "border-zinc-300 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400"
@@ -167,7 +167,7 @@ function FilterDropdown({ value, onChange, options, allLabel, placeholder }: Fil
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder={placeholder}
                   aria-label={placeholder.replace("...", "")}
-                  className="w-full rounded-md border border-zinc-200 bg-zinc-50 py-1.5 pl-8 pr-3 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500"
+                  className="w-full rounded-md border border-zinc-200 bg-zinc-50 py-1.5 pl-8 pr-3 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-hidden dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500"
                 />
               </div>
             </div>
@@ -336,7 +336,7 @@ function GalleryAssetCard(props: {
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black/20">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80">
-              <div className="ml-0.5 h-0 w-0 border-y-[6px] border-l-[10px] border-y-transparent border-l-zinc-900" />
+              <div className="ml-0.5 h-0 w-0 border-y-[6px] border-l-10 border-y-transparent border-l-zinc-900" />
             </div>
           </div>
         </>
@@ -349,12 +349,12 @@ function GalleryAssetCard(props: {
       )}
 
       {/* Hover overlay with prompt */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-full bg-gradient-to-t from-black/70 to-transparent px-2 pb-2 pt-6 opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-full bg-linear-to-t from-black/70 to-transparent px-2 pb-2 pt-6 opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100">
         <p className="line-clamp-2 text-[11px] leading-tight text-white/90">{g.prompt}</p>
       </div>
 
       {g.status !== "succeeded" && (
-        <div className="absolute right-1.5 top-1.5 rounded bg-black/60 px-1.5 py-0.5 backdrop-blur-sm">
+        <div className="absolute right-1.5 top-1.5 rounded bg-black/60 px-1.5 py-0.5 backdrop-blur-xs">
           <span className={["text-[10px]", statusPill(g.status)].join(" ")}>{g.status}</span>
         </div>
       )}
@@ -506,7 +506,7 @@ export function GalleryPanel(props: GalleryPanelProps) {
     "w-full rounded-lg border py-2 pl-10 pr-10",
     "border-zinc-300 bg-white text-sm text-zinc-900 placeholder:text-zinc-400",
     "dark:border-zinc-700 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-500",
-    "focus:border-zinc-500/50 focus:outline-none focus:ring-1 focus:ring-zinc-500/50"
+    "focus:border-zinc-500/50 focus:outline-hidden focus:ring-1 focus:ring-zinc-500/50"
   ].join(" ");
 
   const hasActiveFilters = workflowFilter !== "all" || modelFilter !== "all" || searchQuery !== "";

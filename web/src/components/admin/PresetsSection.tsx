@@ -63,7 +63,7 @@ function ToggleSwitch({ checked, disabled, onChange, title }: {
     >
       <span
         className={[
-          "pointer-events-none inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform",
+          "pointer-events-none inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform",
           checked ? "translate-x-[18px]" : "translate-x-[3px]",
         ].join(" ")}
       />
@@ -365,7 +365,7 @@ export function PresetsSection({ apiBaseUrl }: PresetsSectionProps) {
                 "h-9 rounded-lg border pl-8 pr-3 text-sm",
                 "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400",
                 "dark:border-zinc-700 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-600",
-                "focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/50",
+                "focus:border-zinc-500 focus:outline-hidden focus:ring-2 focus:ring-zinc-500/50",
               ].join(" ")}
             />
             {searchQuery && (
@@ -447,7 +447,7 @@ export function PresetsSection({ apiBaseUrl }: PresetsSectionProps) {
                   "w-full rounded-lg border px-2.5 py-1.5 text-sm",
                   "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400",
                   "dark:border-zinc-700 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-600",
-                  "focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500",
+                  "focus:border-zinc-500 focus:outline-hidden focus:ring-1 focus:ring-zinc-500",
                   "disabled:cursor-not-allowed disabled:opacity-50",
                 ].join(" ")}
               />
@@ -486,7 +486,7 @@ export function PresetsSection({ apiBaseUrl }: PresetsSectionProps) {
                     "min-w-0 flex-1 rounded-lg border px-2.5 py-1.5 text-sm",
                     "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400",
                     "dark:border-zinc-700 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-600",
-                    "focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500",
+                    "focus:border-zinc-500 focus:outline-hidden focus:ring-1 focus:ring-zinc-500",
                     "disabled:cursor-not-allowed disabled:opacity-50",
                   ].join(" ")}
                 />
@@ -566,7 +566,7 @@ export function PresetsSection({ apiBaseUrl }: PresetsSectionProps) {
                   "w-full rounded-lg border px-2.5 py-1.5 text-sm",
                   "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400",
                   "dark:border-zinc-700 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-600",
-                  "focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500",
+                  "focus:border-zinc-500 focus:outline-hidden focus:ring-1 focus:ring-zinc-500",
                   "disabled:cursor-not-allowed disabled:opacity-50",
                 ].join(" ")}
               />
@@ -588,7 +588,7 @@ export function PresetsSection({ apiBaseUrl }: PresetsSectionProps) {
                   "w-full rounded-lg border px-2.5 py-1.5 text-sm",
                   "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400",
                   "dark:border-zinc-700 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-600",
-                  "focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500",
+                  "focus:border-zinc-500 focus:outline-hidden focus:ring-1 focus:ring-zinc-500",
                   "disabled:cursor-not-allowed disabled:opacity-50",
                 ].join(" ")}
               />

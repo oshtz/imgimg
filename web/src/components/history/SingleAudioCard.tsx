@@ -86,7 +86,7 @@ export function SingleAudioCard(props: {
           <>
             <button
               type="button"
-              className="flex-shrink-0 rounded-lg bg-zinc-500/10 p-2 text-zinc-600 hover:bg-zinc-500/20 dark:text-zinc-400"
+              className="shrink-0 rounded-lg bg-zinc-500/10 p-2 text-zinc-600 hover:bg-zinc-500/20 dark:text-zinc-400"
               onClick={() => props.onOpenAsset(g, audioAsset)}
               title="Open in detail panel"
             >

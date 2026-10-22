@@ -81,11 +81,11 @@ export class AssetTypeRegistry {
   aspectClass(id: string): string {
     const ar = this.aspectRatio(id);
     switch (ar) {
-      case "4:5": return "aspect-[4/5]";
-      case "3:2": return "aspect-[3/2]";
-      case "4:3": return "aspect-[4/3]";
+      case "4:5": return "aspect-4/5";
+      case "3:2": return "aspect-3/2";
+      case "4:3": return "aspect-4/3";
       case "16:9": return "aspect-video";
-      case "9:16": return "aspect-[9/16]";
+      case "9:16": return "aspect-9/16";
       case "1:1": return "aspect-square";
       default: {
         // Parse "W:H" and convert to aspect-[W/H]

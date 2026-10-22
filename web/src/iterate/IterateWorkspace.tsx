@@ -54,11 +54,11 @@ type IterateWorkspaceProps = {
 
 const ASPECT_RATIOS = ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"];
 const controlClassName =
-  "h-10 rounded-md border-0 bg-zinc-100 px-3 text-sm font-medium text-zinc-900 outline-none transition focus:ring-2 focus:ring-zinc-400/30 dark:bg-zinc-900 dark:text-zinc-100";
+  "h-10 rounded-md border-0 bg-zinc-100 px-3 text-sm font-medium text-zinc-900 outline-hidden transition focus:ring-2 focus:ring-zinc-400/30 dark:bg-zinc-900 dark:text-zinc-100";
 const secondaryButtonClassName =
   "inline-flex h-10 items-center justify-center gap-1.5 rounded-md border-0 bg-zinc-100 px-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800";
 const threadIconButtonClassName =
-  "flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 shadow-sm transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:bg-black dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:text-zinc-100";
+  "flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 shadow-xs transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:bg-black dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:text-zinc-100";
 
 type ThreadSidebarSide = "left" | "right";
 
@@ -209,7 +209,7 @@ function ThreadList(props: {
                   type="button"
                   onClick={() => props.onSelect(thread.id)}
                   className={cn(
-                    "flex w-full flex-col rounded-lg border px-3 py-3 text-left shadow-sm transition",
+                    "flex w-full flex-col rounded-lg border px-3 py-3 text-left shadow-xs transition",
                     active
                       ? "border-zinc-400 bg-white text-zinc-950 ring-2 ring-zinc-400/10 dark:border-zinc-500 dark:bg-black dark:text-zinc-50"
                       : "border-transparent bg-white/60 text-zinc-600 hover:border-zinc-200 hover:bg-white dark:bg-black/30 dark:text-zinc-400 dark:hover:border-zinc-800 dark:hover:bg-black/70",
@@ -219,7 +219,7 @@ function ThreadList(props: {
                     <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", active ? "bg-zinc-900 dark:bg-zinc-100" : "bg-zinc-300 dark:bg-zinc-700")} />
                     <span className="truncate text-sm font-semibold">{thread.title}</span>
                   </span>
-                  <span className="mt-2 line-clamp-2 min-h-[2rem] text-xs leading-4 text-zinc-500 dark:text-zinc-400">{lastPrompt}</span>
+                  <span className="mt-2 line-clamp-2 min-h-8 text-xs leading-4 text-zinc-500 dark:text-zinc-400">{lastPrompt}</span>
                   <span className="mt-2 flex items-center justify-between gap-2 text-[11px] text-zinc-400 dark:text-zinc-500">
                     <span>{thread.turns.length} turn{thread.turns.length === 1 ? "" : "s"}</span>
                     {updatedAt ? <span>{updatedAt}</span> : null}
@@ -261,12 +261,12 @@ function TurnView(props: {
     <article className="relative grid gap-3 border-b border-zinc-200/80 py-4 pl-8 last:border-b-0 dark:border-zinc-800/80 lg:grid-cols-[minmax(220px,0.78fr)_minmax(300px,1fr)] lg:gap-4">
       <span className="absolute bottom-4 left-4 top-12 w-px bg-zinc-200 dark:bg-zinc-800" />
       <div className="absolute left-1 top-5">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full border border-zinc-200 bg-white text-[11px] font-semibold text-zinc-500 shadow-sm dark:border-zinc-800 dark:bg-black dark:text-zinc-400">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full border border-zinc-200 bg-white text-[11px] font-semibold text-zinc-500 shadow-xs dark:border-zinc-800 dark:bg-black dark:text-zinc-400">
           {props.turnIndex + 1}
         </span>
       </div>
 
-      <div className="min-w-0 rounded-lg border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-black">
+      <div className="min-w-0 rounded-lg border border-zinc-200 bg-white p-3 shadow-xs dark:border-zinc-800 dark:bg-black">
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
           <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", statusTone(status))}>{status}</span>
           <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
@@ -303,7 +303,7 @@ function TurnView(props: {
 
       <div className="min-h-[210px] min-w-0">
         {imageAsset && props.generation ? (
-          <div className="group/result relative flex min-h-[210px] overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="group/result relative flex min-h-[210px] overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 shadow-xs dark:border-zinc-800 dark:bg-zinc-950">
             <button
               type="button"
               onClick={() => props.onOpenAsset(props.generation!, imageAsset)}
@@ -312,13 +312,13 @@ function TurnView(props: {
               <img
                 src={props.assetUrl(imageAsset)}
                 alt=""
-                className="max-h-[420px] w-full rounded object-contain shadow-sm"
+                className="max-h-[420px] w-full rounded object-contain shadow-xs"
               />
             </button>
             <button
               type="button"
               onClick={() => props.onOpenAsset(props.generation!, imageAsset)}
-              className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg bg-black/70 text-white opacity-0 shadow-lg backdrop-blur transition group-hover/result:opacity-100 focus:opacity-100"
+              className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg bg-black/70 text-white opacity-0 shadow-lg backdrop-blur-sm transition group-hover/result:opacity-100 focus:opacity-100"
               title="Open details"
               aria-label="Open details"
             >
@@ -331,7 +331,7 @@ function TurnView(props: {
           </div>
         ) : (
           <div className="flex h-full min-h-[210px] items-center justify-center rounded-lg border border-dashed border-zinc-200 bg-zinc-50 text-sm text-zinc-400 dark:border-zinc-800 dark:bg-zinc-950">
-            <span className="inline-flex items-center rounded-full bg-white px-3 py-1.5 shadow-sm dark:bg-black">
+            <span className="inline-flex items-center rounded-full bg-white px-3 py-1.5 shadow-xs dark:bg-black">
               <TbLoader2 className="mr-2 h-4 w-4 animate-spin text-zinc-500" />
               {status === "running" ? "Generating" : "Queued"}
             </span>
@@ -497,7 +497,7 @@ export function IterateWorkspace(props: IterateWorkspaceProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden pt-8 lg:pt-0">
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 shadow-sm dark:border-zinc-800 dark:bg-black">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 shadow-xs dark:border-zinc-800 dark:bg-black">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">Iterate</h1>
@@ -517,7 +517,7 @@ export function IterateWorkspace(props: IterateWorkspaceProps) {
             const thread = createIterateThread("Untitled thread");
             upsertThread(thread);
           }}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-black dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 shadow-xs transition hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-black dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
         >
           <TbPlus className="h-4 w-4" />
           New thread
@@ -601,7 +601,7 @@ export function IterateWorkspace(props: IterateWorkspaceProps) {
                   </select>
                 ) : null}
                 {selectedWorkflow?.dynamicModel ? (
-                  <div className="min-w-[220px] [&>div]:!min-w-[220px] [&_button]:!border-0 [&_button]:!bg-zinc-100 [&_button]:!shadow-none dark:[&_button]:!bg-zinc-900">
+                  <div className="min-w-[220px] [&>div]:min-w-[220px]! [&_button]:border-0! [&_button]:bg-zinc-100! [&_button]:shadow-none! dark:[&_button]:bg-zinc-900!">
                     <ProviderModelPicker
                       apiBaseUrl={props.apiBaseUrl}
                       provider={dynamicProvider}
@@ -680,7 +680,7 @@ export function IterateWorkspace(props: IterateWorkspaceProps) {
                     <button
                       type="button"
                       onClick={() => setAttachment(null)}
-                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white text-zinc-600 shadow-sm ring-1 ring-zinc-300 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700 dark:hover:bg-zinc-700"
+                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white text-zinc-600 shadow-xs ring-1 ring-zinc-300 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700 dark:hover:bg-zinc-700"
                       aria-label="Remove image"
                     >
                       <TbX className="h-3 w-3" />
@@ -708,7 +708,7 @@ export function IterateWorkspace(props: IterateWorkspaceProps) {
                   }}
                   placeholder="Describe the next change..."
                   rows={3}
-                  className="min-h-[112px] w-full resize-none bg-transparent px-3 py-2.5 pb-12 pr-12 text-sm leading-6 text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100 dark:placeholder:text-zinc-600"
+                  className="min-h-[112px] w-full resize-none bg-transparent px-3 py-2.5 pb-12 pr-12 text-sm leading-6 text-zinc-900 outline-hidden placeholder:text-zinc-400 dark:text-zinc-100 dark:placeholder:text-zinc-600"
                 />
                 <button
                   type="button"

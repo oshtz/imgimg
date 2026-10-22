@@ -51,7 +51,7 @@ export function LoRaPicker({ models, pinnedIds, onChangePinned, onClose }: LoRaP
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={`Search ${models.length} LoRAs...`}
-          className="min-w-0 flex-1 bg-transparent text-sm text-zinc-900 placeholder-zinc-400 outline-none dark:text-zinc-100 dark:placeholder-zinc-500"
+          className="min-w-0 flex-1 bg-transparent text-sm text-zinc-900 placeholder-zinc-400 outline-hidden dark:text-zinc-100 dark:placeholder-zinc-500"
         />
         <button
           onClick={onClose}

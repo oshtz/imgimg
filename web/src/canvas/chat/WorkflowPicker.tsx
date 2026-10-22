@@ -53,7 +53,7 @@ export function WorkflowPicker({ workflows, pinnedIds, onChangePinned, onClose }
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={`Search ${eligible.length} workflows...`}
-          className="min-w-0 flex-1 bg-transparent text-sm text-zinc-900 placeholder-zinc-400 outline-none dark:text-zinc-100 dark:placeholder-zinc-500"
+          className="min-w-0 flex-1 bg-transparent text-sm text-zinc-900 placeholder-zinc-400 outline-hidden dark:text-zinc-100 dark:placeholder-zinc-500"
         />
         <button
           onClick={onClose}

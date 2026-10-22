@@ -41,7 +41,7 @@ function ProviderToggle({ providerKey, enabled, onChange }: { providerKey: strin
     >
       <span
         className={[
-          "inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform",
+          "inline-block h-3.5 w-3.5 rounded-full bg-white shadow-xs transition-transform",
           enabled ? "translate-x-[18px]" : "translate-x-[3px]",
         ].join(" ")}
       />
@@ -470,7 +470,7 @@ export function ApiKeysSection({ apiBaseUrl, enabledProviders, onEnabledProvider
               "border-zinc-300 bg-white text-zinc-900",
               "dark:border-zinc-700 dark:bg-black dark:text-zinc-100",
               "placeholder:text-zinc-400 dark:placeholder:text-zinc-500",
-              "focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/50",
+              "focus:border-zinc-500 focus:outline-hidden focus:ring-2 focus:ring-zinc-500/50",
               "disabled:cursor-not-allowed disabled:opacity-50",
             ].join(" ")}
             disabled={savingOpenrouter}
@@ -483,7 +483,7 @@ export function ApiKeysSection({ apiBaseUrl, enabledProviders, onEnabledProvider
               "rounded-lg px-4 py-2 text-sm font-medium",
               "bg-zinc-600 text-white",
               "hover:bg-zinc-700",
-              "focus:outline-none focus:ring-2 focus:ring-zinc-500",
+              "focus:outline-hidden focus:ring-2 focus:ring-zinc-500",
               "disabled:opacity-50 disabled:cursor-not-allowed",
             ].join(" ")}
           >
@@ -499,7 +499,7 @@ export function ApiKeysSection({ apiBaseUrl, enabledProviders, onEnabledProvider
               "dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
               "hover:border-zinc-400 hover:bg-zinc-50",
               "dark:hover:border-zinc-600 dark:hover:bg-zinc-800",
-              "focus:outline-none focus:ring-2 focus:ring-zinc-400/40",
+              "focus:outline-hidden focus:ring-2 focus:ring-zinc-400/40",
               "disabled:cursor-not-allowed disabled:opacity-50",
             ].join(" ")}
           >
@@ -564,7 +564,7 @@ export function ApiKeysSection({ apiBaseUrl, enabledProviders, onEnabledProvider
               "border-zinc-300 bg-white text-zinc-900",
               "dark:border-zinc-700 dark:bg-black dark:text-zinc-100",
               "placeholder:text-zinc-400 dark:placeholder:text-zinc-500",
-              "focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/50",
+              "focus:border-zinc-500 focus:outline-hidden focus:ring-2 focus:ring-zinc-500/50",
               "disabled:cursor-not-allowed disabled:opacity-50",
             ].join(" ")}
             disabled={savingReplicate}
@@ -577,7 +577,7 @@ export function ApiKeysSection({ apiBaseUrl, enabledProviders, onEnabledProvider
               "rounded-lg px-4 py-2 text-sm font-medium",
               "bg-zinc-600 text-white",
               "hover:bg-zinc-700",
-              "focus:outline-none focus:ring-2 focus:ring-zinc-500",
+              "focus:outline-hidden focus:ring-2 focus:ring-zinc-500",
               "disabled:opacity-50 disabled:cursor-not-allowed",
             ].join(" ")}
           >
@@ -593,7 +593,7 @@ export function ApiKeysSection({ apiBaseUrl, enabledProviders, onEnabledProvider
               "dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
               "hover:border-zinc-400 hover:bg-zinc-50",
               "dark:hover:border-zinc-600 dark:hover:bg-zinc-800",
-              "focus:outline-none focus:ring-2 focus:ring-zinc-400/40",
+              "focus:outline-hidden focus:ring-2 focus:ring-zinc-400/40",
               "disabled:cursor-not-allowed disabled:opacity-50",
             ].join(" ")}
           >
@@ -629,9 +629,9 @@ export function ApiKeysSection({ apiBaseUrl, enabledProviders, onEnabledProvider
           </div>
         )}
         <div className="mt-4 flex items-center gap-3">
-          <input type="password" value={falKeyInput} onChange={(e) => setFalKeyInput(e.target.value)} placeholder="Paste new API key..." className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-500" disabled={savingFal} />
-          <button type="button" onClick={() => void handleSaveFalKey()} disabled={!canSaveFal} className="rounded-lg bg-zinc-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 disabled:cursor-not-allowed disabled:opacity-50">{savingFal ? "Saving..." : "Save"}</button>
-          <button type="button" onClick={() => setShowClearFalConfirm(true)} disabled={!canClearFal} className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-400/40 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-800">Clear</button>
+          <input type="password" value={falKeyInput} onChange={(e) => setFalKeyInput(e.target.value)} placeholder="Paste new API key..." className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-hidden focus:ring-2 focus:ring-zinc-500/50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-500" disabled={savingFal} />
+          <button type="button" onClick={() => void handleSaveFalKey()} disabled={!canSaveFal} className="rounded-lg bg-zinc-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 focus:outline-hidden focus:ring-2 focus:ring-zinc-500 disabled:cursor-not-allowed disabled:opacity-50">{savingFal ? "Saving..." : "Save"}</button>
+          <button type="button" onClick={() => setShowClearFalConfirm(true)} disabled={!canClearFal} className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50 focus:outline-hidden focus:ring-2 focus:ring-zinc-400/40 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-800">Clear</button>
         </div>
       </div>
 
@@ -662,9 +662,9 @@ export function ApiKeysSection({ apiBaseUrl, enabledProviders, onEnabledProvider
           </div>
         )}
         <div className="mt-4 flex items-center gap-3">
-          <input type="password" value={kieKeyInput} onChange={(e) => setKieKeyInput(e.target.value)} placeholder="Paste new API key..." className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-500" disabled={savingKie} />
-          <button type="button" onClick={() => void handleSaveKieKey()} disabled={!canSaveKie} className="rounded-lg bg-zinc-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 disabled:cursor-not-allowed disabled:opacity-50">{savingKie ? "Saving..." : "Save"}</button>
-          <button type="button" onClick={() => setShowClearKieConfirm(true)} disabled={!canClearKie} className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-400/40 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-800">Clear</button>
+          <input type="password" value={kieKeyInput} onChange={(e) => setKieKeyInput(e.target.value)} placeholder="Paste new API key..." className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-hidden focus:ring-2 focus:ring-zinc-500/50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-500" disabled={savingKie} />
+          <button type="button" onClick={() => void handleSaveKieKey()} disabled={!canSaveKie} className="rounded-lg bg-zinc-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 focus:outline-hidden focus:ring-2 focus:ring-zinc-500 disabled:cursor-not-allowed disabled:opacity-50">{savingKie ? "Saving..." : "Save"}</button>
+          <button type="button" onClick={() => setShowClearKieConfirm(true)} disabled={!canClearKie} className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50 focus:outline-hidden focus:ring-2 focus:ring-zinc-400/40 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-800">Clear</button>
         </div>
       </div>
 
@@ -746,7 +746,7 @@ export function ApiKeysSection({ apiBaseUrl, enabledProviders, onEnabledProvider
               "border-zinc-300 bg-white text-zinc-900",
               "dark:border-zinc-700 dark:bg-black dark:text-zinc-100",
               "placeholder:text-zinc-400 dark:placeholder:text-zinc-500",
-              "focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/50",
+              "focus:border-zinc-500 focus:outline-hidden focus:ring-2 focus:ring-zinc-500/50",
               "disabled:cursor-not-allowed disabled:opacity-50",
             ].join(" ")}
             disabled={savingComfyUrls}
@@ -762,7 +762,7 @@ export function ApiKeysSection({ apiBaseUrl, enabledProviders, onEnabledProvider
               "rounded-lg px-4 py-2 text-sm font-medium",
               "bg-zinc-600 text-white",
               "hover:bg-zinc-700",
-              "focus:outline-none focus:ring-2 focus:ring-zinc-500",
+              "focus:outline-hidden focus:ring-2 focus:ring-zinc-500",
               "disabled:opacity-50 disabled:cursor-not-allowed",
             ].join(" ")}
           >
@@ -779,7 +779,7 @@ export function ApiKeysSection({ apiBaseUrl, enabledProviders, onEnabledProvider
                 "dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
                 "hover:border-zinc-400 hover:bg-zinc-50",
                 "dark:hover:border-zinc-600 dark:hover:bg-zinc-800",
-                "focus:outline-none focus:ring-2 focus:ring-zinc-400/40",
+                "focus:outline-hidden focus:ring-2 focus:ring-zinc-400/40",
                 "disabled:cursor-not-allowed disabled:opacity-50",
               ].join(" ")}
             >

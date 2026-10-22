@@ -97,7 +97,7 @@ export function LayersPanel({ onClose, containerWidth, containerHeight }: Props)
   };
 
   return (
-    <div className="absolute bottom-4 left-4 z-30 flex w-56 flex-col rounded-lg border border-zinc-200 bg-white/95 shadow-lg backdrop-blur dark:border-zinc-700 dark:bg-zinc-800/95">
+    <div className="absolute bottom-4 left-4 z-30 flex w-56 flex-col rounded-lg border border-zinc-200 bg-white/95 shadow-lg backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-800/95">
       <div className="flex items-center justify-between border-b border-zinc-200 px-3 py-2 dark:border-zinc-700">
         <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Layers</span>
         <button onClick={onClose} className="p-0.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">

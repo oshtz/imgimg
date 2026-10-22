@@ -209,7 +209,7 @@ export function CanvasOutpaintPanel({ node, viewport, apiBaseUrl, modelId, onCom
           <select
             value={selectedAR}
             onChange={(e) => setSelectedAR(e.target.value)}
-            className="rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-700 focus:border-zinc-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+            className="rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-700 focus:border-zinc-500 focus:outline-hidden dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
           >
             {ASPECT_RATIO_PRESETS.map((ar) => (
               <option key={ar.value} value={ar.value}>{ar.label}</option>
@@ -300,7 +300,7 @@ export function CanvasOutpaintPanel({ node, viewport, apiBaseUrl, modelId, onCom
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="Optional: describe the expanded area..."
-            className="flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+            className="flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-hidden dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
             onKeyDown={(e) => {
               if (e.key === "Enter") void handleSubmit();
             }}
