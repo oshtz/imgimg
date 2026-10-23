@@ -373,7 +373,7 @@ export function CompareModelPicker({
             onClick={() => setShowSearch((value) => !value)}
             className={cn(
               "inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors",
-              "focus:outline-none focus:ring-2 focus:ring-zinc-400/40 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-black",
+              "focus:outline-hidden focus:ring-2 focus:ring-zinc-400/40 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-black",
               showSearch
                 ? "border-zinc-400 bg-white text-zinc-900 ring-1 ring-zinc-400/30 dark:border-zinc-500 dark:bg-zinc-950 dark:text-zinc-100"
                 : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
@@ -429,7 +429,7 @@ export function CompareModelPicker({
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.currentTarget.value)}
               placeholder="Search Replicate, FAL, and OpenRouter models..."
-              className="h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-950 outline-none placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 focus:ring-zinc-400/40 dark:border-zinc-800 dark:bg-black dark:text-zinc-50 dark:focus:border-zinc-600"
+              className="h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-950 outline-hidden placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 focus:ring-zinc-400/40 dark:border-zinc-800 dark:bg-black dark:text-zinc-50 dark:focus:border-zinc-600"
             />
           </div>
 

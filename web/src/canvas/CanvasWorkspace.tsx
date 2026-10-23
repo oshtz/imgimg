@@ -254,7 +254,7 @@ function CanvasWorkspaceInner({
 
         {!loading && (
           <div
-            className="absolute right-3 top-3 z-20 rounded-md bg-white/90 px-2 py-1 text-[11px] text-zinc-500 shadow-sm backdrop-blur dark:bg-zinc-900/90 dark:text-zinc-400"
+            className="absolute right-3 top-3 z-20 rounded-md bg-white/90 px-2 py-1 text-[11px] text-zinc-500 shadow-xs backdrop-blur-sm dark:bg-zinc-900/90 dark:text-zinc-400"
             role="status"
             aria-live="polite"
           >
@@ -298,7 +298,7 @@ function CanvasWorkspaceInner({
           {/* Initial load overlay */}
           {loading && (
             <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-3 rounded-xl bg-white/80 px-8 py-6 shadow-lg backdrop-blur-sm dark:bg-zinc-900/80">
+              <div className="flex flex-col items-center gap-3 rounded-xl bg-white/80 px-8 py-6 shadow-lg backdrop-blur-xs dark:bg-zinc-900/80">
                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-500 dark:border-zinc-600 dark:border-t-zinc-400" />
                 <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Loading canvas...</span>
               </div>
@@ -308,7 +308,7 @@ function CanvasWorkspaceInner({
           {/* Empty canvas hint */}
           {!loading && state.nodes.length === 0 && !canvasHintDismissed && (
             <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
-              <div className="pointer-events-auto flex max-w-xs flex-col gap-2 rounded-xl border border-zinc-200 bg-white/90 px-6 py-5 text-center shadow-lg backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-900/90">
+              <div className="pointer-events-auto flex max-w-xs flex-col gap-2 rounded-xl border border-zinc-200 bg-white/90 px-6 py-5 text-center shadow-lg backdrop-blur-xs dark:border-zinc-700 dark:bg-zinc-900/90">
                 <p className="text-sm text-zinc-600 dark:text-zinc-300">
                   Drag images from the gallery onto the canvas, or use the toolbar to add text and shapes.
                 </p>

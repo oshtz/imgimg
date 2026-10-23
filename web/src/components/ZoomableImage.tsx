@@ -294,7 +294,7 @@ export function ZoomableImage({
 
       {/* Zoom controls — bottom-left, only for images larger than container */}
       {naturalSize.w > 0 && !loading && fitScale < 1 && (
-        <div className="absolute bottom-3 left-3 flex items-center gap-0.5 rounded-lg bg-black/50 px-1 py-0.5 backdrop-blur-sm">
+        <div className="absolute bottom-3 left-3 flex items-center gap-0.5 rounded-lg bg-black/50 px-1 py-0.5 backdrop-blur-xs">
           <button
             onClick={(e) => {
               e.stopPropagation();

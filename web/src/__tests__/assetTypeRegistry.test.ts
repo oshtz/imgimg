@@ -157,12 +157,12 @@ describe("AssetTypeRegistry", () => {
   });
 
   describe("aspectClass()", () => {
-    it("maps 4:5 to aspect-[4/5]", () => {
-      expect(registry.aspectClass("portrait")).toBe("aspect-[4/5]");
+    it("maps 4:5 to aspect-4/5", () => {
+      expect(registry.aspectClass("portrait")).toBe("aspect-4/5");
     });
 
-    it("maps 3:2 to aspect-[3/2]", () => {
-      expect(registry.aspectClass("landscape")).toBe("aspect-[3/2]");
+    it("maps 3:2 to aspect-3/2", () => {
+      expect(registry.aspectClass("landscape")).toBe("aspect-3/2");
     });
 
     it("maps 1:1 to aspect-square", () => {
@@ -178,14 +178,14 @@ describe("AssetTypeRegistry", () => {
       expect(reg.aspectClass("wide")).toBe("aspect-video");
     });
 
-    it("maps 9:16 to aspect-[9/16]", () => {
+    it("maps 9:16 to aspect-9/16", () => {
       const reg = new AssetTypeRegistry([makeType({ id: "tall", aspectRatio: "9:16" })]);
-      expect(reg.aspectClass("tall")).toBe("aspect-[9/16]");
+      expect(reg.aspectClass("tall")).toBe("aspect-9/16");
     });
 
-    it("maps 4:3 to aspect-[4/3]", () => {
+    it("maps 4:3 to aspect-4/3", () => {
       const reg = new AssetTypeRegistry([makeType({ id: "classic", aspectRatio: "4:3" })]);
-      expect(reg.aspectClass("classic")).toBe("aspect-[4/3]");
+      expect(reg.aspectClass("classic")).toBe("aspect-4/3");
     });
 
     it("parses custom W:H ratio", () => {

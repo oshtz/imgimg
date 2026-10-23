@@ -39,7 +39,7 @@ describe("promptPosition", () => {
     });
     expect(paneClass).toContain("lg:self-stretch");
     expect(paneClass).toContain("lg:flex-col");
-    expect(paneClass).toContain("lg:w-[var(--prompt-sidebar-width)]");
+    expect(paneClass).toContain("lg:w-(--prompt-sidebar-width)");
     expect(paneClass).toContain("relative");
 
     const historyClass = getHistoryPaneClassName("right");

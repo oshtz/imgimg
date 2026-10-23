@@ -54,7 +54,7 @@ export function getPromptPaneClassName(options: {
     "lg:flex",
     "lg:flex-col",
     "lg:min-h-0",
-    "lg:w-[var(--prompt-sidebar-width)]",
+    "lg:w-(--prompt-sidebar-width)",
     "lg:flex-none",
     "lg:self-stretch",
   ].join(" ");

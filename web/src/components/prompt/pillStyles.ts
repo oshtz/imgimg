@@ -5,7 +5,7 @@ export function pillBase(disabled?: boolean) {
     "hover:border-zinc-300 hover:bg-zinc-50",
     "dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200",
     "dark:hover:border-zinc-700 dark:hover:bg-zinc-900",
-    "focus:outline-none focus:ring-2 focus:ring-zinc-400/40 focus:ring-offset-2",
+    "focus:outline-hidden focus:ring-2 focus:ring-zinc-400/40 focus:ring-offset-2",
     "focus:ring-offset-white dark:focus:ring-offset-black",
     disabled ? "opacity-60" : ""
   ].join(" ");

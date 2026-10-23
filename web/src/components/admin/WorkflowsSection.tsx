@@ -450,7 +450,7 @@ export function WorkflowsSection({ apiBaseUrl, onWorkflowsChanged }: WorkflowsSe
                 "w-full rounded-lg border py-1.5 pl-8 pr-3 text-xs",
                 "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400",
                 "dark:border-zinc-700 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-500",
-                "focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500",
+                "focus:border-zinc-500 focus:outline-hidden focus:ring-1 focus:ring-zinc-500",
               ].join(" ")}
             />
           </div>
@@ -629,7 +629,7 @@ export function WorkflowsSection({ apiBaseUrl, onWorkflowsChanged }: WorkflowsSe
                       "w-full rounded-lg border px-3 py-2 text-sm",
                       "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400",
                       "dark:border-zinc-700 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-600",
-                      "focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500",
+                      "focus:border-zinc-500 focus:outline-hidden focus:ring-1 focus:ring-zinc-500",
                       !editor.isNew ? "cursor-not-allowed opacity-60" : "",
                     ].join(" ")}
                   />
@@ -652,7 +652,7 @@ export function WorkflowsSection({ apiBaseUrl, onWorkflowsChanged }: WorkflowsSe
                       "w-full rounded-lg border px-3 py-2 text-sm",
                       "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400",
                       "dark:border-zinc-700 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-600",
-                      "focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500",
+                      "focus:border-zinc-500 focus:outline-hidden focus:ring-1 focus:ring-zinc-500",
                     ].join(" ")}
                   />
                 </div>
@@ -673,7 +673,7 @@ export function WorkflowsSection({ apiBaseUrl, onWorkflowsChanged }: WorkflowsSe
                       "w-full rounded-lg border px-3 py-2 text-sm",
                       "border-zinc-300 bg-white text-zinc-900",
                       "dark:border-zinc-700 dark:bg-black dark:text-zinc-100",
-                      "focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500",
+                      "focus:border-zinc-500 focus:outline-hidden focus:ring-1 focus:ring-zinc-500",
                     ].join(" ")}
                   >
                     <option value="single_image">Single Image</option>
@@ -728,7 +728,7 @@ export function WorkflowsSection({ apiBaseUrl, onWorkflowsChanged }: WorkflowsSe
                     value={editor.agentModel}
                     onChange={(e) => updateEditor("agentModel", e.target.value)}
                     placeholder="e.g. anthropic/claude-sonnet-4"
-                    className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 font-mono text-xs text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 font-mono text-xs text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-hidden dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
                   />
                 </div>
                 <div>
@@ -738,7 +738,7 @@ export function WorkflowsSection({ apiBaseUrl, onWorkflowsChanged }: WorkflowsSe
                     onChange={(e) => updateEditor("agentSystemPrompt", e.target.value)}
                     placeholder="Instruct the agent how to behave, what workflows to prefer, how to construct prompts..."
                     rows={6}
-                    className="w-full resize-y rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-xs text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+                    className="w-full resize-y rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-xs text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-hidden dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
                   />
                   <p className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-500">
                     Available workflows and their descriptions will be automatically appended as tool definitions.

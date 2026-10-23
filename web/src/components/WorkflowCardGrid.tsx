@@ -194,7 +194,7 @@ function WorkflowCard(props: {
       title={disabled ? `${engineLabel} is currently unavailable` : workflow.label}
     >
       {/* Preview area */}
-      <div className="relative aspect-[3/2] w-full overflow-hidden">
+      <div className="relative aspect-3/2 w-full overflow-hidden">
         {effectivePreviewUrl && isVideoPreview ? (
           <video
             src={effectivePreviewUrl}
@@ -272,7 +272,7 @@ function CanvasCard(props: {
       title={canvas.name}
     >
       {/* Preview area */}
-      <div className="relative aspect-[3/2] w-full overflow-hidden">
+      <div className="relative aspect-3/2 w-full overflow-hidden">
         {previewUrl ? (
           <img
             src={previewUrl}

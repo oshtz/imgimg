@@ -46,8 +46,7 @@ jobs:
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
       - run: cargo test --manifest-path src-tauri/Cargo.toml --all-targets
       - run: npm audit --audit-level=high
-      # braces has no patched release; it is only reached through Tailwind CSS v3 build-time globbing of trusted config paths.
-      - run: node scripts/audit-npm.mjs web --ignore GHSA-vfj7-8cjw-p6xm
+      - run: npm audit --prefix web --audit-level=high
       - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -16,6 +16,6 @@ describe("AspectRatioPicker", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Aspect ratio" }));
 
-    expect(screen.getByRole("dialog", { name: "Aspect ratio" }).className).toContain("bottom-[calc(100%_+_8px)]");
+    expect(screen.getByRole("dialog", { name: "Aspect ratio" }).className).toContain("bottom-[calc(100%+8px)]");
   });
 });

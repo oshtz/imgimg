@@ -360,7 +360,7 @@ export function GenerationDetailPanel(props: {
                   onClick={() => setShowRembg((v) => !v)}
                   disabled={isRembgProcessing && !rembgAsset}
                   className={[
-                    "inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs backdrop-blur transition-colors",
+                    "inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs backdrop-blur-sm transition-colors",
                     showRembg && rembgAsset
                       ? "bg-zinc-600/90 text-white hover:bg-zinc-600"
                       : "bg-zinc-900/70 text-white hover:bg-zinc-900",
@@ -384,7 +384,7 @@ export function GenerationDetailPanel(props: {
                     const filename = `${displayedAsset?.type ?? "asset"}.${ext}`;
                     void downloadUrl(previewSrc, filename);
                   }}
-                  className="inline-flex items-center gap-2 rounded-full bg-zinc-900/70 px-3 py-2 text-xs text-white backdrop-blur hover:bg-zinc-900"
+                  className="inline-flex items-center gap-2 rounded-full bg-zinc-900/70 px-3 py-2 text-xs text-white backdrop-blur-sm hover:bg-zinc-900"
                 >
                   <TbDownload className="h-4 w-4" />
                   Download
@@ -394,7 +394,7 @@ export function GenerationDetailPanel(props: {
                 <button
                   type="button"
                   onClick={() => props.onDownloadAll?.(generation.id)}
-                  className="inline-flex items-center gap-2 rounded-full bg-zinc-900/70 px-3 py-2 text-xs text-white backdrop-blur hover:bg-zinc-900 disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-full bg-zinc-900/70 px-3 py-2 text-xs text-white backdrop-blur-sm hover:bg-zinc-900 disabled:opacity-60"
                   disabled={props.loading}
                 >
                   <TbDownload className="h-4 w-4" />
@@ -404,7 +404,7 @@ export function GenerationDetailPanel(props: {
               <button
                 type="button"
                 onClick={props.onClose}
-                className="inline-flex items-center justify-center rounded-full bg-zinc-900/70 p-2 text-white backdrop-blur hover:bg-zinc-900"
+                className="inline-flex items-center justify-center rounded-full bg-zinc-900/70 p-2 text-white backdrop-blur-sm hover:bg-zinc-900"
                 aria-label="Close"
               >
                 <TbX className="h-4 w-4" />
@@ -671,7 +671,7 @@ export function GenerationDetailPanel(props: {
                       </button>
                     </div>
                     <div className="rounded-xl bg-zinc-50 px-3.5 py-3 dark:bg-zinc-900/50">
-                      <CopyableText text={primaryPrompt} className="block text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-words">
+                      <CopyableText text={primaryPrompt} className="block text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap wrap-break-word">
                         {primaryPrompt}
                       </CopyableText>
 
@@ -700,7 +700,7 @@ export function GenerationDetailPanel(props: {
                         <div className="mt-3 border-t border-zinc-200/60 pt-3 dark:border-zinc-800/60">
                           <div className="rounded-lg bg-zinc-100 px-2.5 py-1.5 dark:bg-zinc-800/50">
                             <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">Your input</div>
-                            <CopyableText text={generation.prompt} className="block mt-0.5 text-xs text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap break-words">
+                            <CopyableText text={generation.prompt} className="block mt-0.5 text-xs text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap wrap-break-word">
                               {generation.prompt}
                             </CopyableText>
                           </div>
@@ -1004,7 +1004,7 @@ export function GenerationDetailPanel(props: {
 
       {/* Outpaint Modal */}
       {outpaintModalOpen && previewSrc ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+        <div className="fixed inset-0 z-60 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" onClick={() => setOutpaintModalOpen(false)} />
           <div className="relative z-10 w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-6 shadow-lg dark:border-zinc-800 dark:bg-zinc-950">
             <div className="flex items-center justify-between">
@@ -1130,7 +1130,7 @@ export function GenerationDetailPanel(props: {
 
       {/* Inpaint Modal */}
       {inpaintModalOpen && previewSrc ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+        <div className="fixed inset-0 z-60 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" onClick={() => setInpaintModalOpen(false)} />
           <div className="relative z-10 w-full max-w-5xl rounded-xl border border-zinc-200 bg-white p-6 shadow-lg dark:border-zinc-800 dark:bg-zinc-950">
             <div className="flex items-center justify-between">
@@ -1237,7 +1237,7 @@ export function GenerationDetailPanel(props: {
                 <div>
                   <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Prompt</label>
                   <textarea
-                    className="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-400 focus:outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                    className="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-xs focus:border-zinc-400 focus:outline-hidden dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                     rows={4}
                     placeholder="Describe what to add or change"
                     value={inpaintPrompt}
@@ -1250,7 +1250,7 @@ export function GenerationDetailPanel(props: {
                   <input
                     type="number"
                     min="0"
-                    className="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-400 focus:outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                    className="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-xs focus:border-zinc-400 focus:outline-hidden dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                     placeholder="Leave blank for random"
                     value={inpaintSeed}
                     onChange={(e) => setInpaintSeed(e.target.value)}
@@ -1320,7 +1320,7 @@ export function GenerationDetailPanel(props: {
 
       {/* Regen prompt modal */}
       {regenPromptOpen && regenPromptTarget ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+        <div className="fixed inset-0 z-60 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" onClick={() => setRegenPromptOpen(false)} />
           <div className="relative z-10 w-full max-w-md rounded-xl border border-zinc-200 bg-white p-5 shadow-lg dark:border-zinc-800 dark:bg-zinc-950">
             <div className="flex items-center justify-between">
@@ -1340,7 +1340,7 @@ export function GenerationDetailPanel(props: {
               Optional: prepend a short directive to the regeneration prompt.
             </p>
             <textarea
-              className="mt-3 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-400 focus:outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+              className="mt-3 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-xs focus:border-zinc-400 focus:outline-hidden dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
               rows={3}
               placeholder="e.g. add more sparkle, brighter lighting"
               value={regenPromptValue}

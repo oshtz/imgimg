@@ -439,7 +439,7 @@ export function CompareView({
           }}
           placeholder="Prompt to compare..."
           rows={1}
-          className="w-full resize-none overflow-hidden bg-transparent text-sm text-zinc-900 placeholder:text-zinc-500 focus:outline-none dark:text-zinc-100 dark:placeholder:text-zinc-500"
+          className="w-full resize-none overflow-hidden bg-transparent text-sm text-zinc-900 placeholder:text-zinc-500 focus:outline-hidden dark:text-zinc-100 dark:placeholder:text-zinc-500"
         />
         <div className="flex items-center gap-2">
           <button

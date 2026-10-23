@@ -1,6 +1,175 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@import './styles/tailwind-v3-colors.css';
+
+@plugin '@tailwindcss/typography';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: 'Azeret Mono Variable', ui-monospace, monospace;
+  --font-mono: 'Azeret Mono Variable', ui-monospace, monospace;
+
+  /*
+    Keep Tailwind v3's fixed (rem) line heights. v4 uses unitless ratios, which
+    children with arbitrary font sizes (e.g. text-[11px] inside text-sm) inherit.
+  */
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius: 4px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --radius-2xl: 10px;
+  --radius-3xl: 12px;
+  --radius-full: 9999px;
+
+  --color-accent-mist: #dee3e2;
+  --color-accent-blush: #fccbcb;
+  --color-accent-sky: #78b3d6;
+  --color-accent-coral: #d86969;
+  --color-accent-ember: #a34545;
+  --color-accent-forest: #4f7969;
+
+  --animate-bounce-once: bounce-once 0.3s ease-out;
+  --animate-scale-up: scale-up 0.4s ease-out forwards;
+  --animate-fade-in: fade-in 0.3s ease-out forwards;
+  --animate-float-up: float-up 2s ease-out forwards;
+  --animate-spin-slow: spin-slow 3s linear infinite;
+  --animate-spin-slow-reverse: spin-slow-reverse 3s linear infinite;
+  --animate-reel-spin: reel-spin 0.1s linear infinite;
+  --animate-light-chase: light-chase 0.5s ease-in-out infinite alternate;
+  --animate-skeleton-shimmer: skeleton-shimmer 4s ease-in-out infinite;
+  --animate-skeleton-progress: skeleton-progress 2s ease-in-out infinite;
+
+  @keyframes bounce-once {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+  @keyframes scale-up {
+    0% {
+      transform: scale(0.8);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.05);
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  @keyframes fade-in {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  @keyframes float-up {
+    0% {
+      transform: translateY(100%) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-400%) rotate(360deg);
+      opacity: 0;
+    }
+  }
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes spin-slow-reverse {
+    from {
+      transform: rotate(360deg);
+    }
+    to {
+      transform: rotate(0deg);
+    }
+  }
+  @keyframes reel-spin {
+    0% {
+      transform: translateY(0);
+    }
+    100% {
+      transform: translateY(-100%);
+    }
+  }
+  @keyframes light-chase {
+    0%,
+    100% {
+      opacity: 0.3;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  @keyframes skeleton-shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+  @keyframes skeleton-progress {
+    0% {
+      transform: translateX(-100%);
+    }
+    50% {
+      transform: translateX(200%);
+    }
+    100% {
+      transform: translateX(400%);
+    }
+  }
+}
+
+/*
+  Tailwind CSS v3 preflight compatibility. v4 changed these defaults:
+  - borders default to `currentcolor` (v3: gray-200)
+  - placeholders default to the text color at 50% opacity (v3: gray-400)
+  - buttons use `cursor: default` (v3: pointer)
+  Elements that set these explicitly via utilities are unaffected.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray-400);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
 
 :root {
   --imgimg-ui-scale: 1;

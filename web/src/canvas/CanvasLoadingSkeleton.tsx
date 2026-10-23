@@ -40,7 +40,7 @@ export function CanvasLoadingSkeletons({ pending, viewport }: Props) {
         return (
           <div
             key={gen.id}
-            className={`pointer-events-none absolute z-[1] animate-fade-in ${isFailed ? "opacity-70" : "opacity-50"}`}
+            className={`pointer-events-none absolute z-1 animate-fade-in ${isFailed ? "opacity-70" : "opacity-50"}`}
             style={{ left: screenX, top: screenY, width: screenW, height: screenH }}
           >
             <div className={`relative flex h-full w-full items-center justify-center overflow-hidden rounded-lg border ${isFailed ? "border-red-400 bg-red-100 dark:border-red-800 dark:bg-red-900/40" : "border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800"}`}>

@@ -355,7 +355,7 @@ export function AdminPanel({ isOpen, onClose, apiBaseUrl, theme, onThemeChange, 
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-xs"
         aria-label="Close settings"
         onClick={onClose}
       />
@@ -384,7 +384,7 @@ export function AdminPanel({ isOpen, onClose, apiBaseUrl, theme, onThemeChange, 
                   className={[
                     "flex w-full items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors",
                     isActive
-                      ? "bg-white font-medium text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-zinc-100"
+                      ? "bg-white font-medium text-zinc-900 shadow-xs dark:bg-zinc-900 dark:text-zinc-100"
                       : "text-zinc-600 hover:bg-white/60 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900/50 dark:hover:text-zinc-200",
                   ].join(" ")}
                 >

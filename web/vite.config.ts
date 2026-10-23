@@ -1,5 +1,6 @@
 import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 /**
  * Sonner v2.0.7 injects CSS at module-load time via __insertCSS().
@@ -24,7 +25,7 @@ function fixSonnerCssWarning(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [fixSonnerCssWarning(), react()],
+  plugins: [fixSonnerCssWarning(), react(), tailwindcss()],
   server: {
     port: 3000
   }

@@ -32,7 +32,7 @@ export function ZoomControls({ containerWidth, containerHeight }: Props) {
   };
 
   return (
-    <div className="flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-1 py-0.5 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
+    <div className="flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-1 py-0.5 shadow-xs dark:border-zinc-700 dark:bg-zinc-800">
       <button
         onClick={zoomOut}
         className="rounded p-1 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-700"

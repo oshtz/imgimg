@@ -90,7 +90,7 @@ export function AspectRatioPicker(props: {
           role="dialog"
           aria-label="Aspect ratio"
           className={[
-            `absolute left-0 z-50 w-[18rem] overflow-hidden rounded-xl border shadow-lg ${props.dropUp ? "bottom-[calc(100%_+_8px)]" : "top-[calc(100%_+_8px)]"}`,
+            `absolute left-0 z-50 w-[18rem] overflow-hidden rounded-xl border shadow-lg ${props.dropUp ? "bottom-[calc(100%+8px)]" : "top-[calc(100%+8px)]"}`,
             "border-zinc-200 bg-white",
             "dark:border-zinc-800 dark:bg-black"
           ].join(" ")}
@@ -102,7 +102,7 @@ export function AspectRatioPicker(props: {
             </div>
 
             <div className="mt-3 flex items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
-              <div className="flex h-40 w-40 items-center justify-center rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-black">
+              <div className="flex h-40 w-40 items-center justify-center rounded-lg border border-zinc-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-black">
                 <div
                   className="rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950"
                   style={{ width: `${fit.widthPct}%`, height: `${fit.heightPct}%` }}

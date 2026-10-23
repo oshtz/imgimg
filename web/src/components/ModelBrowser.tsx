@@ -29,10 +29,10 @@ function ModelCard(props: {
         <img
           src={model.thumbnailUrl}
           alt=""
-          className="aspect-[3/2] w-full object-cover"
+          className="aspect-3/2 w-full object-cover"
         />
       ) : (
-        <div className="flex aspect-[3/2] w-full items-center justify-center bg-zinc-100 dark:bg-zinc-800">
+        <div className="flex aspect-3/2 w-full items-center justify-center bg-zinc-100 dark:bg-zinc-800">
           <span className="text-xs text-zinc-400">{model.provider}</span>
         </div>
       )}
@@ -197,7 +197,7 @@ export function ModelBrowser({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={`Search ${activeTab === "replicate" ? "Replicate" : "fal.ai"} models...`}
-                className="w-full rounded-md border border-zinc-300 bg-white py-1.5 pl-8 pr-3 text-sm text-zinc-900 outline-none focus:border-accent-forest dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                className="w-full rounded-md border border-zinc-300 bg-white py-1.5 pl-8 pr-3 text-sm text-zinc-900 outline-hidden focus:border-accent-forest dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
               />
             </div>
             <button

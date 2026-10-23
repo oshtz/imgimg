@@ -195,7 +195,7 @@ function WaveformBars(props: {
   return (
     <div
       ref={rootRef}
-      className="relative h-32 touch-none overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 shadow-sm dark:border-zinc-800 dark:bg-black"
+      className="relative h-32 touch-none overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 shadow-xs dark:border-zinc-800 dark:bg-black"
       onPointerDown={(event) => {
         if (event.button !== 0) return;
         beginDrag("seek", event.clientX, event.pointerId);
@@ -217,7 +217,7 @@ function WaveformBars(props: {
         setDragMode(null);
       }}
     >
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(24,24,27,0.04)_1px,transparent_1px),linear-gradient(0deg,rgba(24,24,27,0.04)_1px,transparent_1px)] bg-[length:36px_100%,100%_24px] dark:bg-[linear-gradient(90deg,rgba(255,255,255,0.055)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.045)_1px,transparent_1px)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(24,24,27,0.04)_1px,transparent_1px),linear-gradient(0deg,rgba(24,24,27,0.04)_1px,transparent_1px)] bg-size-[36px_100%,100%_24px] dark:bg-[linear-gradient(90deg,rgba(255,255,255,0.055)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.045)_1px,transparent_1px)]" />
       <div
         className="absolute bottom-8 top-0 rounded bg-zinc-900/5 ring-1 ring-zinc-900/15 dark:bg-zinc-100/10 dark:ring-zinc-100/20"
         style={{
@@ -247,8 +247,8 @@ function WaveformBars(props: {
         className="pointer-events-none absolute bottom-8 top-0 z-20 w-0.5 bg-zinc-950 shadow-[0_0_0_1px_rgba(255,255,255,0.55)] dark:bg-zinc-50 dark:shadow-[0_0_0_1px_rgba(0,0,0,0.55)]"
         style={{ left: `${playheadPercent}%` }}
       >
-        <span className="absolute -left-[3px] top-0 h-2 w-2 rounded-full bg-zinc-950 dark:bg-zinc-50" />
-        <span className="absolute -bottom-1 -left-[3px] h-2 w-2 rounded-full bg-zinc-950 dark:bg-zinc-50" />
+        <span className="absolute left-[-3px] top-0 h-2 w-2 rounded-full bg-zinc-950 dark:bg-zinc-50" />
+        <span className="absolute -bottom-1 left-[-3px] h-2 w-2 rounded-full bg-zinc-950 dark:bg-zinc-50" />
       </div>
       {([
         ["start", props.rangeStart, formatTime(props.duration * (props.rangeStart / 100))],
@@ -258,7 +258,7 @@ function WaveformBars(props: {
           type="button"
           key={handle}
           aria-label={`${handle === "start" ? "Range start" : "Range end"} ${label}`}
-          className="absolute bottom-8 top-0 z-30 flex w-4 -translate-x-1/2 items-center justify-center rounded-full border border-zinc-300 bg-white text-zinc-700 shadow-sm transition-colors hover:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:border-zinc-500"
+          className="absolute bottom-8 top-0 z-30 flex w-4 -translate-x-1/2 items-center justify-center rounded-full border border-zinc-300 bg-white text-zinc-700 shadow-xs transition-colors hover:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:border-zinc-500"
           style={{ left: `${value}%` }}
           onPointerDown={(event) => {
             if (event.button !== 0) return;
@@ -391,7 +391,7 @@ function AudioPlayer(props: {
   if (!props.item) {
     return (
       <div className="flex min-h-[380px] flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50/70 p-8 text-center text-zinc-400 dark:border-zinc-800 dark:bg-black/30">
-        <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
+        <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-xs dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
           <TbHeadphones className="h-7 w-7" />
         </div>
         <div className="mt-4 text-sm font-medium text-zinc-700 dark:text-zinc-300">Select a take to audition</div>
@@ -605,7 +605,7 @@ export function AudioDesk(props: AudioDeskProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
-      <div className="rounded-xl border border-zinc-200 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,244,245,0.72))] px-4 py-3 shadow-sm dark:border-zinc-800 dark:bg-[linear-gradient(135deg,rgba(9,9,11,0.98),rgba(24,24,27,0.92))]">
+      <div className="rounded-xl border border-zinc-200 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,244,245,0.72))] px-4 py-3 shadow-xs dark:border-zinc-800 dark:bg-[linear-gradient(135deg,rgba(9,9,11,0.98),rgba(24,24,27,0.92))]">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-300 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
@@ -634,7 +634,7 @@ export function AudioDesk(props: AudioDeskProps) {
             <select
               value={selectedWorkflow?.id ?? ""}
               onChange={(event) => setSelectedWorkflowId(event.currentTarget.value)}
-              className="h-9 max-w-[260px] rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-500"
+              className="h-9 max-w-[260px] rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-hidden transition-colors focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-500"
             >
               {audioWorkflows.map((workflow) => (
                 <option key={workflow.id} value={workflow.id}>{workflow.label}</option>
@@ -676,7 +676,7 @@ export function AudioDesk(props: AudioDeskProps) {
       </div>
 
       <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(380px,0.92fr)_minmax(500px,1.08fr)]">
-        <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-950">
           <div className="border-b border-zinc-200 p-4 dark:border-zinc-800">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
@@ -700,7 +700,7 @@ export function AudioDesk(props: AudioDeskProps) {
               }}
               placeholder="Describe the track, loop, ambience, hit, voice, or texture..."
               rows={5}
-              className="min-h-[132px] w-full resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm leading-6 text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-500 dark:border-zinc-800 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-600 dark:focus:border-zinc-500"
+              className="min-h-[132px] w-full resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm leading-6 text-zinc-900 outline-hidden transition-colors placeholder:text-zinc-400 focus:border-zinc-500 dark:border-zinc-800 dark:bg-black dark:text-zinc-100 dark:placeholder:text-zinc-600 dark:focus:border-zinc-500"
             />
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button
@@ -728,13 +728,13 @@ export function AudioDesk(props: AudioDeskProps) {
                   value={query}
                   onChange={(event) => setQuery(event.currentTarget.value)}
                   placeholder="Search prompts, workflows, tags"
-                  className="h-9 w-full rounded-lg border border-zinc-200 bg-white pl-8 pr-2 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500 dark:border-zinc-800 dark:bg-black dark:text-zinc-100 dark:focus:border-zinc-500"
+                  className="h-9 w-full rounded-lg border border-zinc-200 bg-white pl-8 pr-2 text-sm text-zinc-900 outline-hidden transition-colors focus:border-zinc-500 dark:border-zinc-800 dark:bg-black dark:text-zinc-100 dark:focus:border-zinc-500"
                 />
               </div>
               <select
                 value={selectedTag}
                 onChange={(event) => setSelectedTag(event.currentTarget.value)}
-                className="h-9 rounded-lg border border-zinc-200 bg-white px-2.5 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500 dark:border-zinc-800 dark:bg-black dark:text-zinc-100 dark:focus:border-zinc-500"
+                className="h-9 rounded-lg border border-zinc-200 bg-white px-2.5 text-sm text-zinc-900 outline-hidden transition-colors focus:border-zinc-500 dark:border-zinc-800 dark:bg-black dark:text-zinc-100 dark:focus:border-zinc-500"
               >
                 <option value="all">All tags</option>
                 {allTags.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
@@ -817,7 +817,7 @@ export function AudioDesk(props: AudioDeskProps) {
           </div>
         </section>
 
-        <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-zinc-950">
           <AudioPlayer item={selectedItem} src={selectedSrc} onOpenAsset={props.onOpenAsset} />
 
           {selectedItem ? (
@@ -836,7 +836,7 @@ export function AudioDesk(props: AudioDeskProps) {
                     value={tagDraft}
                     onChange={(event) => setTagDraft(event.currentTarget.value)}
                     placeholder="Add or remove tag"
-                    className="h-9 min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500 dark:border-zinc-800 dark:bg-black dark:text-zinc-100 dark:focus:border-zinc-500"
+                    className="h-9 min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-hidden transition-colors focus:border-zinc-500 dark:border-zinc-800 dark:bg-black dark:text-zinc-100 dark:focus:border-zinc-500"
                   />
                 </form>
               </div>

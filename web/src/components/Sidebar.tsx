@@ -159,7 +159,7 @@ function SortableWorkflowItem(props: {
 
 function DragOverlayContent(props: { label: string; engine?: string }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-lg bg-zinc-100/90 px-2 py-2.5 text-sm font-medium text-zinc-900 shadow-sm backdrop-blur-sm dark:bg-zinc-800/90 dark:text-zinc-100">
+    <div className="flex items-center gap-1.5 rounded-lg bg-zinc-100/90 px-2 py-2.5 text-sm font-medium text-zinc-900 shadow-xs backdrop-blur-xs dark:bg-zinc-800/90 dark:text-zinc-100">
       {props.engine && ENGINE_LOGOS[props.engine] && (
         <span
           className="inline-block h-3.5 w-3.5 shrink-0 bg-current"
@@ -268,7 +268,7 @@ function FolderHeader(props: {
             if (e.key === "Enter") commitRename();
             if (e.key === "Escape") { setEditName(props.folder.name); setEditing(false); }
           }}
-          className="min-w-0 flex-1 rounded border border-zinc-300 bg-white px-1.5 py-0.5 text-xs text-zinc-900 outline-none focus:border-accent-sky dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+          className="min-w-0 flex-1 rounded border border-zinc-300 bg-white px-1.5 py-0.5 text-xs text-zinc-900 outline-hidden focus:border-accent-sky dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
         />
       ) : (
         <button
@@ -647,7 +647,7 @@ function SortableWorkflowList(props: {
 
         {/* Separator between pinned and rest */}
         {pinnedRoot.length > 0 && (unpinnedRoot.length > 0 || folders.length > 0) && (
-          <div className="my-1 border-t border-zinc-100 dark:border-zinc-800" />
+          <div className="border-t border-zinc-100 dark:border-zinc-800" />
         )}
 
         {/* Folders */}
@@ -1097,7 +1097,7 @@ export function Sidebar(props: {
                         onChange={(e) => setRenameValue(e.target.value)}
                         onBlur={commitRename}
                         onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenamingCanvasId(null); }}
-                        className="min-w-0 flex-1 rounded px-2 py-2 text-sm bg-zinc-100 dark:bg-zinc-800 outline-none"
+                        className="min-w-0 flex-1 rounded px-2 py-2 text-sm bg-zinc-100 dark:bg-zinc-800 outline-hidden"
                       />
                     ) : (
                       <button

@@ -60,7 +60,7 @@ export function ConfirmDialog({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center">
+    <div className="fixed inset-0 z-60 flex items-center justify-center">
       {/* Backdrop */}
       <button
         type="button"
@@ -95,7 +95,7 @@ export function ConfirmDialog({
               "inline-flex h-8 w-8 items-center justify-center rounded-lg",
               "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700",
               "dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200",
-              "focus:outline-none focus:ring-2 focus:ring-zinc-400/40",
+              "focus:outline-hidden focus:ring-2 focus:ring-zinc-400/40",
             ].join(" ")}
             aria-label="Close"
           >
@@ -119,7 +119,7 @@ export function ConfirmDialog({
               "dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
               "hover:border-zinc-400 hover:bg-zinc-50",
               "dark:hover:border-zinc-600 dark:hover:bg-zinc-800",
-              "focus:outline-none focus:ring-2 focus:ring-zinc-400/40",
+              "focus:outline-hidden focus:ring-2 focus:ring-zinc-400/40",
             ].join(" ")}
           >
             {cancelLabel}
@@ -129,7 +129,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
             className={[
               "rounded-lg px-4 py-2 text-sm font-medium",
-              "focus:outline-none focus:ring-2",
+              "focus:outline-hidden focus:ring-2",
               isDestructive
                 ? "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500"
                 : "bg-zinc-600 text-white hover:bg-zinc-700 focus:ring-zinc-500",

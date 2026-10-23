@@ -74,10 +74,10 @@ function ProviderMark({ provider, label, compact = false }: { provider: string; 
 function LoadingRow() {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-      <div className="h-7 w-7 animate-skeleton-shimmer rounded-lg bg-gradient-to-r from-zinc-200 via-zinc-100 to-zinc-200 bg-[length:200%_100%] dark:from-zinc-800 dark:via-zinc-700 dark:to-zinc-800" />
+      <div className="h-7 w-7 animate-skeleton-shimmer rounded-lg bg-linear-to-r from-zinc-200 via-zinc-100 to-zinc-200 bg-size-[200%_100%] dark:from-zinc-800 dark:via-zinc-700 dark:to-zinc-800" />
       <div className="min-w-0 flex-1 space-y-2">
-        <div className="h-3 w-2/3 animate-skeleton-shimmer rounded bg-gradient-to-r from-zinc-200 via-zinc-100 to-zinc-200 bg-[length:200%_100%] dark:from-zinc-800 dark:via-zinc-700 dark:to-zinc-800" />
-        <div className="h-2.5 w-1/2 animate-skeleton-shimmer rounded bg-gradient-to-r from-zinc-200 via-zinc-100 to-zinc-200 bg-[length:200%_100%] dark:from-zinc-800 dark:via-zinc-700 dark:to-zinc-800" />
+        <div className="h-3 w-2/3 animate-skeleton-shimmer rounded bg-linear-to-r from-zinc-200 via-zinc-100 to-zinc-200 bg-size-[200%_100%] dark:from-zinc-800 dark:via-zinc-700 dark:to-zinc-800" />
+        <div className="h-2.5 w-1/2 animate-skeleton-shimmer rounded bg-linear-to-r from-zinc-200 via-zinc-100 to-zinc-200 bg-size-[200%_100%] dark:from-zinc-800 dark:via-zinc-700 dark:to-zinc-800" />
       </div>
     </div>
   );
@@ -328,7 +328,7 @@ export function ProviderModelPicker({
         className={cn(
           "flex min-w-0 flex-1 items-center gap-2 border border-zinc-200 bg-white text-left transition-colors",
           compact ? "h-10 min-h-10 rounded-l-md px-2.5 py-1.5" : "min-h-[40px] rounded-l-lg px-2.5 py-2",
-          "focus:outline-none focus:ring-2 focus:ring-zinc-400/40 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-black",
+          "focus:outline-hidden focus:ring-2 focus:ring-zinc-400/40 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-black",
           "hover:border-zinc-300 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900/50"
         )}
       >
@@ -360,7 +360,7 @@ export function ProviderModelPicker({
       ) : null}
 
       {open ? createPortal(
-        <div className="fixed inset-0 z-[90]">
+        <div className="fixed inset-0 z-90">
           <button
             type="button"
             aria-label="Close model chooser"
@@ -404,7 +404,7 @@ export function ProviderModelPicker({
                   onChange={(event) => setQuery(event.currentTarget.value)}
                   placeholder={`Search ${providerLabel} models...`}
                   disabled={disabled}
-                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-950 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 focus:ring-zinc-400/40 dark:border-zinc-800 dark:bg-black dark:text-zinc-50 dark:focus:border-zinc-600"
+                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-950 outline-hidden transition-colors placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 focus:ring-zinc-400/40 dark:border-zinc-800 dark:bg-black dark:text-zinc-50 dark:focus:border-zinc-600"
                 />
               </div>
 
